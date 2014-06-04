@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -75,6 +75,12 @@ void wxGISSpatialTreeData::SetGeometry(const wxGISGeometry &oGeom)
 { 
     m_Geom = oGeom; 
 }
+
+wxGISSpatialTreeData* wxGISSpatialTreeData::Clone() const
+{
+    return new wxGISSpatialTreeData(m_Geom.Clone(), m_nFID);
+}
+
 
 //-----------------------------------------------------------------------------
 // wxGISSpatialTree
@@ -147,9 +153,6 @@ wxThread::ExitCode wxGISSpatialTree::Entry()
 
     long nItemCounter(0);
 
-    //get only geometries
-    wxArrayString saIgnoredFields = m_pDSet->GetFieldNames();
-    saIgnoredFields.Add(wxT("OGR_STYLE"));
 
 	if(pProgress)
     {
@@ -158,7 +161,15 @@ wxThread::ExitCode wxGISSpatialTree::Entry()
     } 
 
     m_pDSet->Reset();
-    m_pDSet->SetIgnoredFields(saIgnoredFields);
+
+    //get only geometries if no filter is set
+    wxArrayString saIgnoredFields;
+    if (!m_pDSet->HasFilter())
+    {
+        saIgnoredFields = m_pDSet->GetFieldNames();
+        saIgnoredFields.Add(wxT("OGR_STYLE"));
+        m_pDSet->SetIgnoredFields(saIgnoredFields);
+    }
 
     //reprojecion
     OGRCoordinateTransformation *poCT = NULL;
@@ -184,10 +195,11 @@ wxThread::ExitCode wxGISSpatialTree::Entry()
             }
 
             wxGISSpatialTreeData *pData(NULL);
+            long nFid = Feature.GetFID();
             if(Feature.GetRefData()->GetRefCount() > 1)
-                pData = new wxGISSpatialTreeData(Geom, Feature.GetFID());//appologise the feature is buffered in m_pDSet
+                pData = new wxGISSpatialTreeData(Geom, nFid);//appologise the feature is buffered in m_pDSet
             else
-                pData = new wxGISSpatialTreeData(Geom.Copy(), Feature.GetFID());
+                pData = new wxGISSpatialTreeData(Geom.Copy(), nFid);
 
             Insert(pData);
             m_paCachedData.push_back(pData);
@@ -324,7 +336,7 @@ wxGISRTreeNode::wxGISRTreeNode(unsigned short nMinChildItems, unsigned short nMa
         if(Geom.IsOk())
         {
             m_Env = Geom.GetEnvelope();
-            m_dfArea = std::fabs((m_Env.MaxX - m_Env.MinX) * (m_Env.MaxY - m_Env.MinY));
+            m_dfArea = fabs((m_Env.MaxX - m_Env.MinX) * (m_Env.MaxY - m_Env.MinY));
         }
     }
 }
@@ -400,7 +412,7 @@ void wxGISRTreeNode::Delete()
 void wxGISRTreeNode::StretchBounds(const OGREnvelope &Env)
 {
     m_Env.Merge(Env);
-    m_dfArea = std::fabs((m_Env.MaxX - m_Env.MinX) * (m_Env.MaxY - m_Env.MinY));
+    m_dfArea = fabs((m_Env.MaxX - m_Env.MinX) * (m_Env.MaxY - m_Env.MinY));
 }
 
 void wxGISRTreeNode::UpdateBounds(void)
@@ -412,7 +424,7 @@ void wxGISRTreeNode::UpdateBounds(void)
         m_Env.Merge(m_paNodes[i]->GetBounds());
     }
     
-    m_dfArea = std::fabs((m_Env.MaxX - m_Env.MinX) * (m_Env.MaxY - m_Env.MinY));
+    m_dfArea = fabs((m_Env.MaxX - m_Env.MinX) * (m_Env.MaxY - m_Env.MinY));
 }
 
 OGREnvelope wxGISRTreeNode::GetBounds() const
@@ -561,10 +573,10 @@ wxGISRTreeNode::SPLIT_DIR wxGISRTreeNode::GetSplitDirection(const bool bIsX, siz
             dfDeltaX2 = R2.MaxX - R2.MinX;
             dfDeltaY2 = R2.MaxY - R2.MinY;
             margin += dfDeltaX1 + dfDeltaY1 + dfDeltaX2 + dfDeltaY2;
-            area += std::fabs(dfDeltaX1 * dfDeltaY1) + std::fabs(dfDeltaX2 * dfDeltaY2);
+            area += fabs(dfDeltaX1 * dfDeltaY1) + fabs(dfDeltaX2 * dfDeltaY2);
             
             R1.Intersect(R2);
-            overlap = std::fabs(R1.MaxX - R1.MinX * R1.MaxY - R1.MinY); 
+            overlap = fabs(R1.MaxX - R1.MinX * R1.MaxY - R1.MinY);
                 
             // CSI1: Along the split axis, choose the distribution with the 
             // minimum overlap-value. Resolve ties by choosing the distribution

@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -26,6 +26,10 @@
 #include "../../art/shp_dset_48.xpm"
 #include "../../art/table_dbf_16.xpm"
 #include "../../art/table_dbf_48.xpm"
+
+static const char *shape_filter_exts[] = {
+    "dbf", "prj", "qpj", NULL
+};
 
 
 IMPLEMENT_DYNAMIC_CLASS(wxGxShapeFactoryUI, wxGxShapeFactory)
@@ -49,6 +53,28 @@ wxGxObject* wxGxShapeFactoryUI::GetGxObject(wxGxObject* pParent, const wxString 
     {
     case enumGISFeatureDataset:
         {
+            //remove dbf, prj if exist
+            CPLString sTestPath;
+            wxGxObject *pCompoundObjectPart = NULL;
+            wxGxObjectContainer* pParentCont = wxDynamicCast(pParent, wxGxObjectContainer);
+
+            for (int j = 0; shape_filter_exts[j] != NULL; ++j)
+            {
+                sTestPath = (char*)CPLResetExtension(szPath, shape_filter_exts[j]);
+
+                wxGxObjectList::const_iterator iter;
+                for (iter = pParentCont->GetChildren().begin(); iter != pParentCont->GetChildren().end(); ++iter)
+                {
+                    wxGxObject *current = *iter;
+                    if (wxGISEQUAL(current->GetPath(), sTestPath))
+                    {
+                        current->Destroy();
+                        break;
+                    }
+                }
+            }
+
+
             if(!m_SmallSHPIcon.IsOk())
                 m_SmallSHPIcon = wxIcon(shp_dset_16_xpm);
             if(!m_LargeSHPIcon.IsOk())

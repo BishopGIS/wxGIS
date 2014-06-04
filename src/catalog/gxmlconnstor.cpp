@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -158,7 +158,7 @@ wxGxJSONConnectionStorage::~wxGxJSONConnectionStorage(void)
 void wxGxJSONConnectionStorage::OnFileSystemEvent(wxFileSystemWatcherEvent& event)
 {
     //reread conn.json file
-    wxLogDebug(wxT("*** %s ***"), event.ToString().c_str());
+    //wxLogDebug(wxT("*** %s ***"), event.ToString().c_str());
     if(event.GetPath().GetFullName().CmpNoCase(m_sStorageName) == 0)
         LoadConnectionsStorage();
 
@@ -178,7 +178,15 @@ void wxGxJSONConnectionStorage::LoadConnectionsStorage(void)
     //try to load connections json file
     int numErrorsStorage = oStorageReader.Parse( StorageInputStream, &oStorageRoot );
     if ( numErrorsStorage > 0 )  {
-        wxLogError("The JSON Storage document is not well-formed");
+        const wxArrayString& errors = oStorageReader.GetErrors();
+        wxString sErrMsg(_("The JSON Storage document is not well-formed"));
+        for (size_t i = 0; i < errors.GetCount(); ++i)
+        {
+            wxString sErr = errors[i];
+            sErrMsg.Append(wxT("\n"));
+            sErrMsg.Append(wxString::Format(wxT("%d. %s"), i, sErr.c_str()));
+        }
+        wxLogError(sErrMsg);
         return CreateConnectionsStorage();
     }
 
@@ -269,7 +277,15 @@ bool wxGxJSONConnectionStorage::DeleteItemById(int nStoreId)
     //try to load connections storage file
     int numErrorsStorage = oStorageReader.Parse( StorageInputStream, &oStorageRoot );
     if ( numErrorsStorage > 0 )  {
-        wxLogError("The JSON Storage document is not well-formed");
+        const wxArrayString& errors = oStorageReader.GetErrors();
+        wxString sErrMsg(_("The JSON Storage document is not well-formed"));
+        for (size_t i = 0; i < errors.GetCount(); ++i)
+        {
+            wxString sErr = errors[i];
+            sErrMsg.Append(wxT("\n"));
+            sErrMsg.Append(wxString::Format(wxT("%d. %s"), i, sErr.c_str()));
+        }
+        wxLogError(sErrMsg);
         return false;
     }
 
@@ -313,7 +329,15 @@ bool wxGxJSONConnectionStorage::RenameItemById(int nStoreId, const wxString& New
     //try to load connections storage file
     int numErrorsStorage = oStorageReader.Parse( StorageInputStream, &oStorageRoot );
     if ( numErrorsStorage > 0 )  {
-        wxLogError("The JSON Storage document is not well-formed");
+        const wxArrayString& errors = oStorageReader.GetErrors();
+        wxString sErrMsg(_("The JSON Storage document is not well-formed"));
+        for (size_t i = 0; i < errors.GetCount(); ++i)
+        {
+            wxString sErr = errors[i];
+            sErrMsg.Append(wxT("\n"));
+            sErrMsg.Append(wxString::Format(wxT("%d. %s"), i, sErr.c_str()));
+        }
+        wxLogError(sErrMsg);
         return false;
     }
 
@@ -355,7 +379,15 @@ bool wxGxJSONConnectionStorage::AddItem(int nStoreId, const wxString& sName, con
     //try to load connections json file
     int numErrorsStorage = oStorageReader.Parse( StorageInputStream, &oStorageRoot );
     if ( numErrorsStorage > 0 )  {
-        wxLogError("The JSON Storage document is not well-formed");
+        const wxArrayString& errors = oStorageReader.GetErrors();
+        wxString sErrMsg(_("The JSON Storage document is not well-formed"));
+        for (size_t i = 0; i < errors.GetCount(); ++i)
+        {
+            wxString sErr = errors[i];
+            sErrMsg.Append(wxT("\n"));
+            sErrMsg.Append(wxString::Format(wxT("%d. %s"), i, sErr.c_str()));
+        }
+        wxLogError(sErrMsg);
         return false;
     }
 

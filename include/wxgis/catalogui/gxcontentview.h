@@ -3,11 +3,11 @@
  * Purpose:  wxGxContentView class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009-2014 Bishop
+*   Copyright (C) 2009-2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -31,7 +31,7 @@
 
 class wxGxApplication;
 
-#define LISTSTYLE (wxLC_REPORT | wxBORDER_NONE | wxLC_EDIT_LABELS |wxLC_SORT_ASCENDING | wxLC_AUTOARRANGE) //wxLC_LIST
+#define LISTSTYLE (wxLC_REPORT | wxBORDER_NONE | wxLC_EDIT_LABELS | wxLC_AUTOARRANGE) //wxLC_LIST|wxLC_SORT_ASCENDING
 
 //TODO: Fix mouse selection dragging linux
 
@@ -57,7 +57,8 @@ class WXDLLIMPEXP_GIS_CLU wxGxContentView :
 	public wxListCtrl,
 	public wxGxView,
     public IGxContentsView,
-    public IViewDropTarget
+    public IViewDropTarget,
+    public wxThreadHelper
 {
     DECLARE_DYNAMIC_CLASS(wxGxContentView)
 public:
@@ -121,6 +122,9 @@ protected:
     int GetIconPos(wxIcon icon_small, wxIcon icon_large);
     virtual void InitColumns(void);
     virtual void SelectItem(int nChar = WXK_DOWN, bool bShift = false);
+    virtual wxThread::ExitCode Entry();
+    virtual bool CreateAndRunFillMetaThread(void);
+    virtual void DestroyFillMetaThread(void);
 protected:
 	bool m_bSortAsc;
 	short m_currentSortCol;
@@ -141,8 +145,11 @@ protected:
     wxVector<ICONDATA> m_IconsArray;
     wxCriticalSection m_CritSect;
     wxCriticalSection m_CritSectCont;
+    wxCriticalSection m_CritSectFillMeta;
     long m_HighLightItem;
     int m_bPrevChar;
+
+    wxArrayLong m_anFillMetaIDs;
 private:
     DECLARE_EVENT_TABLE()
 };

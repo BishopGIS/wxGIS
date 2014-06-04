@@ -3,11 +3,11 @@
  * Purpose:  GxDataset classes.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009-2013 Bishop
+*   Copyright (C) 2009-2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -45,6 +45,11 @@ wxGxDataset::~wxGxDataset()
     if (NULL != m_pwxGISDataset)
         m_pwxGISDataset->Close();
     wsDELETE(m_pwxGISDataset);
+}
+
+bool wxGxDataset::IsMetadataFilled() const
+{
+    return m_bIsMetadataFilled;
 }
 
 void wxGxDataset::FillMetadata(bool bForce)
@@ -131,7 +136,7 @@ bool wxGxDataset::CanCopy(const CPLString &szDestPath)
     return bRet;
 }
 
-bool wxGxDataset::CanMove(const CPLString &szDestPath) 
+bool wxGxDataset::CanMove(const CPLString &szDestPath)
 {
     return CanCopy(szDestPath) & CanDelete();
 }
@@ -323,6 +328,11 @@ void wxGxDatasetContainer::FillMetadata(bool bForce)
     wsDELETE(pDSet);
 }
 
+bool wxGxDatasetContainer::IsMetadataFilled() const
+{
+    return m_bIsMetadataFilled;
+}
+
 bool wxGxDatasetContainer::CanDelete(void)
 {
     return true;
@@ -338,7 +348,7 @@ bool wxGxDatasetContainer::CanCopy(const CPLString &szDestPath)
     return true;
 }
 
-bool wxGxDatasetContainer::CanMove(const CPLString &szDestPath) 
+bool wxGxDatasetContainer::CanMove(const CPLString &szDestPath)
 {
     return CanCopy(szDestPath) & CanDelete();
 }
@@ -501,7 +511,7 @@ wxGISDataset* const wxGxTableDataset::GetDataset(bool bCache, ITrackCancel* cons
 
     if(NULL != pwxGISTable && !pwxGISTable->IsOpened())
     {
-        if(!pwxGISTable->Open(0, 0, bCache, pTrackCancel))
+        if (!pwxGISTable->Open(0, TRUE, bCache, pTrackCancel))
         {
             wsDELETE(pwxGISTable);
 		    const char* err = CPLGetLastErrorMsg();
@@ -563,7 +573,7 @@ wxGISDataset* const wxGxFeatureDataset::GetDataset(bool bCache, ITrackCancel* co
 
     if(NULL != pwxGISFeatureDataset && !pwxGISFeatureDataset->IsOpened())
     {
-        if(!pwxGISFeatureDataset->Open(0, 0, bCache, pTrackCancel))
+        if (!pwxGISFeatureDataset->Open(0, TRUE, bCache, pTrackCancel))
         {
             wsDELETE(pwxGISFeatureDataset);
 		    const char* err = CPLGetLastErrorMsg();

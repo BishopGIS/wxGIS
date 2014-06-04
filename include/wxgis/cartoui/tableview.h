@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -35,6 +35,7 @@
 #include <wx/textctrl.h>
 #include <wx/sizer.h>
 #include <wx/panel.h>
+#include <wx/statline.h>
 
 #include "wxgis/carto/carto.h"
 #include "wxgis/datasource/table.h"
@@ -69,6 +70,11 @@ public:
     virtual wxString GetColLabelValue(int col);
 	virtual wxString GetRowLabelValue(int row);
     virtual wxGISTable* GetDataset() const;
+    virtual void ClearFeatures(void);
+    virtual bool DeleteCols(size_t  pos = 0, size_t numCols = 1);
+    virtual void SetEncoding(const wxFontEncoding &oEncoding);
+    virtual bool CanDeleteField(void) const;
+    virtual wxGridCellAttr *GetAttr(int row, int col, wxGridCellAttr::wxAttrKind kind);
 protected:
     virtual void FillForPos(int nRow);
 private:
@@ -77,6 +83,7 @@ private:
 	int m_nCols;          // columns from dataSet
     int m_nRows;          // rows initially returned by dataSet
     wxGISFeatureMap m_moFeatures;
+    std::map<int, int> m_mnAlign;
 };
 
 /**
@@ -90,16 +97,36 @@ private:
 class WXDLLIMPEXP_GIS_CTU wxGridCtrl:
 	public wxGrid
 {
+    enum
+    {
+        ID_DELETE = wxID_HIGHEST + 5001,
+        ID_SORT_ASC,
+        ID_SORT_DESC,
+        ID_ADVANCED_SORTING,
+        ID_FIELD_CALCULATOR,
+        ID_CALCULATE_GEOMETRY,
+        ID_TURN_FIELD_OFF,
+        ID_FREESE_COLUMN,
+        ID_PROPERTIES,
+        ID_STATISTICS,
+        ID_MAX
+    };
 	DECLARE_DYNAMIC_CLASS(wxGridCtrl)
-protected:
-	virtual void DrawRowLabel(wxDC& dc, int row);
-    virtual void OnLabelLeftClick(wxGridEvent& event);
-    virtual void OnSelectCell(wxGridEvent& event);
 public:
 	wxGridCtrl();
 	virtual ~wxGridCtrl(void);
 	wxGridCtrl(wxWindow* parent, wxWindowID id, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxWANTS_CHARS, const wxString& name = wxPanelNameStr);
-
+    virtual void SetEncoding(const wxFontEncoding &eEnc);
+protected:
+	virtual void DrawRowLabel(wxDC& dc, int row);
+    virtual void OnLabelLeftClick(wxGridEvent& event);
+    virtual void OnLabelRightClick(wxGridEvent& event);
+    virtual void OnSelectCell(wxGridEvent& event);
+    virtual void OnMenu(wxCommandEvent& event);
+    virtual void OnMenuUpdateUI(wxUpdateUIEvent& event);
+protected:
+    wxMenu *m_pMenu;
+private:
     DECLARE_EVENT_TABLE();
 };
 
@@ -118,7 +145,8 @@ class WXDLLIMPEXP_GIS_CTU wxGISTableView :
         ID_PREV,
         ID_NEXT,
         ID_LAST,
-	    ID_POS
+	    ID_POS,
+        ID_ENCODING
     };
     DECLARE_CLASS(wxGISTableView)
 public:
@@ -136,14 +164,18 @@ public:
 	void OnBtnPrev(wxCommandEvent& event);
 	void OnBtnLast(wxCommandEvent& event);
 	void OnSetPos(wxCommandEvent& event);
+    void OnEncodingSelect(wxCommandEvent& event);
 protected:
 	wxGridCtrl* m_grid;
-	wxStaticText* m_staticText1, *m_staticText2;
+    wxStaticText* m_staticText1, *m_staticText2, *m_staticText3, *m_staticText4;
 	wxBitmapButton* m_bpFirst;
 	wxBitmapButton* m_bpPrev;
 	wxTextCtrl* m_position;
 	wxBitmapButton* m_bpNext;
 	wxBitmapButton* m_bpLast;
+    wxComboBox *m_pEncodingsCombo;
+    wxStaticLine *m_staticline1;
+    std::map<wxString, wxFontEncoding> m_mnEnc;
 private:
     DECLARE_EVENT_TABLE()
 };

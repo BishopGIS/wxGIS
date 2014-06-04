@@ -7,7 +7,7 @@
 # *
 # *    This program is free software: you can redistribute it and/or modify
 # *    it under the terms of the GNU General Public License as published by
-# *    the Free Software Foundation, either version 3 of the License, or
+# *    the Free Software Foundation, either version 2 of the License, or
 # *    (at your option) any later version.
 # *
 # *    This program is distributed in the hope that it will be useful,
@@ -121,7 +121,7 @@ set(PROJECT_HHEADERS ${PROJECT_HHEADERS}
     ${LIB_HEADERS}/tablepropertypage.h
     ${LIB_HEADERS}/vectorpropertypage.h
     ${LIB_HEADERS}/viewscmd.h
-    ${LIB_HEADERS}/remoteconndlg.h
+    ${LIB_HEADERS}/remoteconndlgs.h
     ${LIB_HEADERS}/gxremoteconnui.h
     ${LIB_HEADERS}/gxpostgisdatasetui.h
     ${LIB_HEADERS}/gxdbconnectionsui.h
@@ -133,7 +133,10 @@ set(PROJECT_HHEADERS ${PROJECT_HHEADERS}
     ${LIB_HEADERS}/gxshellconnui.h
     ${LIB_HEADERS}/gxshellconnectionsui.h
     ${LIB_HEADERS}/gxshellconnfactoryui.h
-)
+    ${LIB_HEADERS}/gxgisprojui.h
+    ${LIB_HEADERS}/gxgisprojfactoryui.h
+    ${LIB_HEADERS}/gxlocaldbfactoryui.h
+    ${LIB_HEADERS}/gxlocaldbui.h)
 
 set(PROJECT_CSOURCES ${PROJECT_CSOURCES}
     ${LIB_SOURCES}/catalogcmd.cpp
@@ -182,7 +185,7 @@ set(PROJECT_CSOURCES ${PROJECT_CSOURCES}
     ${LIB_SOURCES}/gxdbconnfactoryui.cpp
     ${LIB_SOURCES}/gxwebconnectionsui.cpp
     ${LIB_SOURCES}/gxwebconnfactoryui.cpp
-    ${LIB_SOURCES}/remoteconndlg.cpp
+    ${LIB_SOURCES}/remoteconndlgs.cpp
     ${LIB_SOURCES}/gxremoteconnui.cpp
     ${LIB_SOURCES}/gxpostgisdatasetui.cpp
     ${LIB_SOURCES}/droptarget.cpp #think about move to other lib
@@ -190,6 +193,10 @@ set(PROJECT_CSOURCES ${PROJECT_CSOURCES}
     ${LIB_SOURCES}/gxshellconnui.cpp
     ${LIB_SOURCES}/gxshellconnectionsui.cpp
     ${LIB_SOURCES}/gxshellconnfactoryui.cpp
+    ${LIB_SOURCES}/gxgisprojui.cpp
+    ${LIB_SOURCES}/gxgisprojfactoryui.cpp
+    ${LIB_SOURCES}/gxlocaldbfactoryui.cpp
+    ${LIB_SOURCES}/gxlocaldbui.cpp
 )
 
 add_definitions(-DWXMAKINGDLL_GIS_CLU)

@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -251,7 +251,8 @@ void wxGISGPParameter::SetSelDomainValue(int nNewSelection)
         case enumGISGPParamDTIntegerChoice:
         case enumGISGPParamDTDoubleChoice:
         case enumGISGPParamDTStringChoiceEditable:
-            SetValue(m_pDomain->GetValue(nNewSelection));
+            if (m_pDomain->GetCount() > 0)
+                SetValue(m_pDomain->GetValue(nNewSelection));
 			break;
 		case enumGISGPParamDTStringList:
 		case enumGISGPParamDTPathArray:
@@ -268,8 +269,7 @@ void wxGISGPParameter::SetSelDomainValue(int nNewSelection)
                         if(!oName.HasExt()) //set sel domain
                         {
                             wxGxObjectFilter* poFilter = poDomain->GetFilter(GetSelDomainValue());
-                            wxString sExt = poFilter->GetExt();
-                            oName.SetExt(sExt.Right(sExt.Len() - 1));
+                            oName.SetExt(poFilter->GetExt());
                             SetValue(wxVariant(oName.GetFullPath(), wxT("path")));
                         }
                     }

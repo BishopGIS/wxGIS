@@ -3,11 +3,11 @@
  * Purpose:  wxGISVectorPropertyPage class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2010-2013 Bishop
+*   Copyright (C) 2010-2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -18,7 +18,6 @@
 *    You should have received a copy of the GNU General Public License
 *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ****************************************************************************/
-
 #include "wxgis/catalogui/vectorpropertypage.h"
 #include "wxgis/datasource/sysop.h"
 
@@ -57,9 +56,11 @@ bool wxGISVectorPropertyPage::Create(IGxDataset* pGxDataset, wxWindow* parent, w
     m_pDataset = wxDynamicCast(m_pGxDataset->GetDataset(false), wxGISFeatureDataset);
     if(!m_pDataset)
         return false;
-	if(!m_pDataset->IsOpened())
-		if(!m_pDataset->Open(0, 0, false))
+    if (!m_pDataset->IsOpened())
+    {
+		if(!m_pDataset->Open(0, TRUE, false))
 			return false;
+    }
 
 	wxBoxSizer* bMainSizer;
 	bMainSizer = new wxBoxSizer( wxVERTICAL );
@@ -72,7 +73,7 @@ bool wxGISVectorPropertyPage::Create(IGxDataset* pGxDataset, wxWindow* parent, w
 
     bMainSizer->Add( m_pg, 1, wxEXPAND | wxALL, 5 );
 
-	this->SetSizer( bMainSizer );
+	this->SetSizerAndFit( bMainSizer );
 	this->Layout();
 
     return true;
@@ -169,7 +170,11 @@ void wxGISVectorPropertyPage::FillGrid(void)
         AppendProperty(pdssid, new wxIntProperty(_("Layer Count"), wxPG_LABEL, pDataSource->GetLayerCount()) );  
         AppendProperty(pdssid, new wxStringProperty(_("Create Layer"), wxPG_LABEL, pDataSource->TestCapability(ODsCCreateLayer) == TRUE ? _("true") : _("false")) ); 
         AppendProperty(pdssid, new wxStringProperty(_("Delete Layer"), wxPG_LABEL, pDataSource->TestCapability(ODsCDeleteLayer) == TRUE ? _("true") : _("false")));
+
+#if GDAL_VERSION_NUM > 1100100
         AppendProperty(pdssid, new wxStringProperty(_("Create Geom Field After Create Layer"), wxPG_LABEL, pDataSource->TestCapability(ODsCCreateGeomFieldAfterCreateLayer) == TRUE ? _("true") : _("false")));
+#endif
+
     }
 
     if(pDataSource)
@@ -257,7 +262,11 @@ void wxGISVectorPropertyPage::FillLayerDef(OGRLayer *poLayer, int iLayer, CPLStr
     AppendProperty(pcapid, new wxStringProperty(_("Delete Field"), wxString::Format(wxT("Delete Field_%d"), iLayer), poLayer->TestCapability(OLCDeleteField) == TRUE ? _("true") : _("false")));
     AppendProperty(pcapid, new wxStringProperty(_("Reorder Fields"), wxString::Format(wxT("Reorder Fields_%d"), iLayer), poLayer->TestCapability(OLCReorderFields) == TRUE ? _("true") : _("false")));
     AppendProperty(pcapid, new wxStringProperty(_("Alter Field Definition"), wxString::Format(wxT("Alter Field Definition_%d"), iLayer), poLayer->TestCapability(OLCAlterFieldDefn) == TRUE ? _("true") : _("false")));
-    AppendProperty(pcapid, new wxStringProperty(_("Create Geometry Field"), wxString::Format(wxT("Create Geometry Field_%d"), iLayer), poLayer->TestCapability(OLCCreateGeomField) == TRUE ? _("true") : _("false")));
+
+#if GDAL_VERSION_NUM > 1100100
+        AppendProperty(pcapid, new wxStringProperty(_("Create Geometry Field"), wxString::Format(wxT("Create Geometry Field_%d"), iLayer), poLayer->TestCapability(OLCCreateGeomField) == TRUE ? _("true") : _("false")));
+#endif
+
     AppendProperty(pcapid, new wxStringProperty(_("Delete Feature"), wxString::Format(wxT("Delete Feature_%d"), iLayer), poLayer->TestCapability(OLCDeleteFeature) == TRUE ? _("true") : _("false")));
     AppendProperty(pcapid, new wxStringProperty(_("Strings As UTF8"), wxString::Format(wxT("Strings As UTF8_%d"), iLayer), poLayer->TestCapability(OLCStringsAsUTF8) == TRUE ? _("true") : _("false")));
     AppendProperty(pcapid, new wxStringProperty(_("Transactions"), wxString::Format(wxT("Transactions_%d"), iLayer), poLayer->TestCapability(OLCTransactions) == TRUE ? _("true") : _("false")));

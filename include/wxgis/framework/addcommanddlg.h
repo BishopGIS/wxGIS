@@ -3,11 +3,11 @@
  * Purpose:  add command in command bar dialog.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009-2010,2013  Bishop
+*   Copyright (C) 2009-2010,2013,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -67,7 +67,7 @@ protected:
 	wxButton* m_sdbSizerCancel;
 
 public:
-	wxGISAddCommandDlg( wxGISApplication* pGxApp, wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Add command"),const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 540,400 ), long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
+	wxGISAddCommandDlg( wxGISApplication* pGxApp, wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Add command"),const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
 	~wxGISAddCommandDlg(void);
 	void FillIDArray(void);
 	void SplitterOnIdle( wxIdleEvent& )

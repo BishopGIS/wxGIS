@@ -3,11 +3,11 @@
  * Purpose:  wxGxDiscConnectionUI class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2010-2013 Bishop
+*   Copyright (C) 2010-2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -23,8 +23,11 @@
 #include "wxgis/catalogui/gxfolderui.h"
 #include "wxgis/catalog/gxdiscconnection.h"
 
-/** \class wxGxDiscConnectionUI gxdiscconnectionui.h
-    \brief A Disc Connection GxObject.
+/** @class wxGxDiscConnectionUI
+
+    A Disc Connection GxObject.
+
+    @library{catalogui}
 */
 
 class WXDLLIMPEXP_GIS_CLU wxGxDiscConnectionUI :
@@ -40,9 +43,6 @@ public:
     wxGxDiscConnectionUI(void);
 	wxGxDiscConnectionUI(wxGxObject *oParent, int nStoreId, const wxString &soName = wxEmptyString, const CPLString &soPath = "", const wxIcon &SmallIco = wxNullIcon, const wxIcon &LargeIco = wxNullIcon, const wxIcon &SmallIcoDsbl = wxNullIcon, const wxIcon &LargeIcoDsbl = wxNullIcon);
 	virtual ~wxGxDiscConnectionUI(void);
-    //wxGxObjectContainer
-    virtual bool HasChildren(void);
-    virtual void Refresh(void);
 	//IGxObjectUI
 	virtual wxIcon GetLargeImage(void);
 	virtual wxIcon GetSmallImage(void);

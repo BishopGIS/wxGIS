@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -28,12 +28,14 @@
 #include <wx/window.h>
 #include <wx/dynarray.h>
 
-/** \enum wxGISPluginIDs applicationbase.h
-    \brief A plugin command or menu command ID enumerator.
+/** @enum wxGISPluginIDs
 
+    A plugin command or menu command ID enumerator.
     New command ID from user plugin will be set from wxID_HIGHEST + 1 to wxID_HIGHEST + 1049
     New menu item ID from user plugin will be set from wxID_HIGHEST + 1050 to wxID_HIGHEST + 2049
-*/
+
+    @library{framework}
+ */
 enum wxGISPluginIDs
 {
 	ID_PLUGINCMD = wxID_HIGHEST + 2001,
@@ -44,16 +46,20 @@ enum wxGISPluginIDs
     ID_MENUCMDMAX = ID_MENUCMD + 255
 };	
 
-/** \def typedef wxArrayInt WINDOWARRAY applicationbase.h
-    \brief A wxWindow IDs array.
-*/
+/** @def typedef wxArrayInt WINDOWARRAY
+    
+    A wxWindow IDs array.
+
+    @library{framework}
+ */
 typedef wxArrayInt WINDOWARRAY;
 
-/** \class wxGISApplicationBase applicationbase.h
-    \brief wxGISApplicationBase class.
+/** @class wxGISApplicationBase
 
     This is base class for framed applicaton.    
-*/
+
+    @library{framework}
+ */
 class WXDLLIMPEXP_GIS_FRW wxGISApplicationBase : public IApplication
 {
     DECLARE_CLASS(wxGISApplicationBase)
@@ -80,6 +86,7 @@ public:
 	virtual void RegisterChildWindow(wxWindowID nWndID);
 	virtual void UnRegisterChildWindow(wxWindowID nWndID);
     virtual wxWindow* GetRegisteredWindowByType(const wxClassInfo * info) const;
+	virtual void Command(wxGISCommand* pCmd);
     //IApplication
     virtual wxString GetAppName(void) const{return wxEmptyString;};
     virtual wxString GetAppVersionString(void) const{return wxEmptyString;};
@@ -99,7 +106,6 @@ public:
 protected:
     virtual void LoadCommands(wxXmlNode* pRootNode);
 	virtual void LoadMenues(wxXmlNode* pRootNode);
-	virtual void Command(wxGISCommand* pCmd);
 protected:
 	wxCommandPtrArray m_CommandArray;
 	wxGISCommandBarPtrArray m_CommandBarArray;

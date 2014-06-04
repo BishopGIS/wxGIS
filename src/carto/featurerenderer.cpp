@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -156,15 +156,23 @@ void wxGISFeatureRenderer::Draw(const wxGISSpatialTreeCursor& Cursor, wxGISEnumD
     if (NULL != pTrackCancel)
     {
         pProgress = pTrackCancel->GetProgressor();
-        pProgress->SetRange(Cursor.size());
     }
 
+    if (NULL != pProgress)
+    {
+        pProgress->SetRange(Cursor.size());
+    }
 
     wxGISSpatialTreeCursor::const_iterator iter;
     for(iter = Cursor.begin(); iter != Cursor.end(); ++iter)
     {
         if (NULL != pProgress)
+        {
             pProgress->SetValue(nCounter++);
+        }
+
+        if (m_pSymbol == NULL)
+            break;
 
         wxGISSpatialTreeData *current = *iter;
         if(!current)
@@ -248,7 +256,7 @@ bool wxGISUniqueValueRenderer::Apply(ITrackCancel* const pTrackCancel)
         wsDELETE(it->second);
     m_omSymbols.clear();
 
-    long nFeaturesCount = m_pwxGISFeatureDataset->GetFeatureCount(TRUE, pTrackCancel);
+    long nFeaturesCount = m_pwxGISFeatureDataset->GetFeatureCount(FALSE, pTrackCancel);
     if (nFeaturesCount == 0)
     {
         return true;     // success
@@ -258,7 +266,7 @@ bool wxGISUniqueValueRenderer::Apply(ITrackCancel* const pTrackCancel)
     if (pTrackCancel)
     {
         pTrackCancel->Reset();
-        pTrackCancel->PutMessage(wxString(_("Apply renderer for ")) + m_pwxGISFeatureLayer->GetName(), -1, enumGISMessageInfo);
+        pTrackCancel->PutMessage(wxString(_("Apply renderer for")) + wxT(" ") + m_pwxGISFeatureLayer->GetName(), -1, enumGISMessageInfo);
         pProgress = pTrackCancel->GetProgressor();
     }
 
@@ -269,7 +277,9 @@ bool wxGISUniqueValueRenderer::Apply(ITrackCancel* const pTrackCancel)
     } 
     
     //set needed fields
-    wxArrayString saIgnoredFields = m_pwxGISFeatureDataset->GetFieldNames();
+    wxArrayString saIgnoredFields;
+    if (!m_pwxGISFeatureDataset->HasFilter())
+        saIgnoredFields = m_pwxGISFeatureDataset->GetFieldNames();
     saIgnoredFields.Add(wxT("OGR_STYLE"));
     saIgnoredFields.Add(wxT("GEOMETRY"));
 

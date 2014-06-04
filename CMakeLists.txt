@@ -3,11 +3,11 @@
 # * Purpose:  cmake script
 # * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
 # ****************************************************************************
-# *   Copyright (C) 2013 Bishop
+# *   Copyright (C) 2013-2014 Bishop
 # *
 # *    This program is free software: you can redistribute it and/or modify
 # *    it under the terms of the GNU General Public License as published by
-# *    the Free Software Foundation, either version 3 of the License, or
+# *    the Free Software Foundation, either version 2 of the License, or
 # *    (at your option) any later version.
 # *
 # *    This program is distributed in the hope that it will be useful,
@@ -84,7 +84,7 @@ if(wxGIS_PORTABLE)
     add_definitions(-DwxGIS_PORTABLE)
 endif(wxGIS_PORTABLE)
 
-if(MSVC)
+if(MSVC OR MSVC_IDE)
     #string(REPLACE "/W4" "/W0" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
     #string(REPLACE "/W4" "/W0" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     # string(REPLACE "/Gm" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
@@ -95,6 +95,11 @@ if(MSVC)
         set_target_properties(${the_target} PROPERTIES STATIC_LIBRARY_FLAGS "/machine:x64")
         add_definitions(-D_WIN64)
     endif()
+    
+  if( MSVC_VERSION GREATER 1600 )
+    set(CMAKE_GENERATOR_TOOLSET "v120_xp" CACHE STRING "Platform Toolset" FORCE) 
+    add_definitions(-D_USING_V120_SDK71_)
+  endif() 
 endif()
 
 if(UNIX)
@@ -249,13 +254,19 @@ if(WIN32)
     install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/opt/config/ DESTINATION ${WXGIS_CURRENT_BINARY_DIR}/Release/config CONFIGURATIONS Release)
     install(DIRECTORY ${WXGIS_CURRENT_BINARY_DIR} DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/include FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp" PATTERN ".svn" EXCLUDE PATTERN "src" EXCLUDE)
 else(WIN32)#UNIX
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/opt/loc/ DESTINATION share/locale/wxgis/ FILES_MATCHING PATTERN "*.mo" PATTERN "*.txt" PATTERN ".svn" EXCLUDE)
-    install(CODE "FILE(MAKE_DIRECTORY /var/log/wxgis)")
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/opt/sys/ DESTINATION share/wxgis FILES_MATCHING PATTERN "*" PATTERN ".svn" EXCLUDE)
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/opt/config/ DESTINATION /etc/wxgis FILES_MATCHING PATTERN "*.xml" PATTERN ".svn" EXCLUDE)
+    FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/opt/wxgis)
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/opt/wxgis DESTINATION /var/log/ DIRECTORY_PERMISSIONS
+        OWNER_WRITE OWNER_READ OWNER_EXECUTE
+        GROUP_WRITE GROUP_READ GROUP_EXECUTE
+        WORLD_WRITE WORLD_READ WORLD_EXECUTE)
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/opt/loc/ DESTINATION share/wxgis/locale/ FILES_MATCHING PATTERN "*.mo" PATTERN "*.txt" PATTERN ".svn" EXCLUDE)
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/opt/sys/ DESTINATION share/wxgis/sys FILES_MATCHING PATTERN "*" PATTERN ".svn" EXCLUDE)
+    #install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/opt/config/ DESTINATION /etc/wxgis FILES_MATCHING PATTERN "*.xml" PATTERN ".svn" EXCLUDE)
     install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/wxgis DESTINATION include FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp" PATTERN ".svn" EXCLUDE)
     install(DIRECTORY ${WXGIS_CURRENT_BINARY_DIR} DESTINATION include FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp" PATTERN ".svn" EXCLUDE PATTERN "src" EXCLUDE)
+
     install(FILES ${CMAKE_SOURCE_DIR}/cmake/wxgis.conf DESTINATION /etc/ld.so.conf.d)
+    #no need - use sudo lddconfig in install script
 #    COMMAND "ldconfig"
 endif(WIN32)
 

@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -43,8 +43,8 @@ wxGISProgressDlg::wxGISProgressDlg(const wxString &title, const wxString &messag
 
     wxBoxSizer* bMainSizer = new wxBoxSizer(wxVERTICAL);
 
-    m_staticText = new wxStaticText(this, wxID_ANY, m_sLastMessage, wxDefaultPosition, wxDefaultSize, 0);
-    m_staticText->Wrap(-1);
+    m_staticText = new wxStaticText(this, wxID_ANY, m_sLastMessage, wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_MIDDLE);
+    //m_staticText->Wrap(-1);
     bMainSizer->Add(m_staticText, 1, wxALL | wxEXPAND, 5);
 
     wxGISProgressor* pProgressBar = new wxGISProgressor(this, wxID_ANY);
@@ -68,7 +68,7 @@ wxGISProgressDlg::wxGISProgressDlg(const wxString &title, const wxString &messag
     m_sdbSizer->Realize();
     bMainSizer->Add(m_sdbSizer, 0, wxEXPAND | wxALL, 5);
 
-    this->SetSizer(bMainSizer);
+    this->SetSizerAndFit(bMainSizer);
     this->Layout();
 
     this->Centre(wxBOTH);

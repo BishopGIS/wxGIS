@@ -3,11 +3,11 @@
  * Purpose:  Remote Connection UI classes.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2011,2013 Bishop
+*   Copyright (C) 2011,2013,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -38,6 +38,7 @@ class WXDLLIMPEXP_GIS_CLU wxGxRemoteConnectionUI :
 	public IGxObjectUI,
     public IGxObjectEditUI,
     public IGxObjectWizard,
+    public IGxDropTarget,
     public wxGxAutoRenamer
 {
     DECLARE_CLASS(wxGxRemoteConnectionUI)
@@ -55,6 +56,9 @@ public:
 	virtual void EditProperties(wxWindow *parent);
     //IGxObjectWizard
     virtual bool Invoke(wxWindow* pParentWnd);
+    //IGxDropTarget
+    virtual wxDragResult CanDrop(wxDragResult def);
+    virtual bool Drop(const wxArrayString& saGxObjectPaths, bool bMove);
 protected:
     //wxGxRemoteConnection
     virtual wxGxRemoteDBSchema* GetNewRemoteDBSchema(const wxString &sName, const CPLString &soPath, wxGISPostgresDataSource *pwxGISRemoteConn);
@@ -177,6 +181,34 @@ protected:
     wxIcon m_icLargeIconDsbl, m_icSmallIconDsbl;
 };
 
+/** @class wxGxNGWRootUI
+
+    A NextGIS Web Service Root Layers GxObjectUI.
+
+    @library {catalog}
+*/
+class WXDLLIMPEXP_GIS_CLU wxGxNGWRootUI :
+    public wxGxNGWRoot,
+    public IGxObjectUI
+{
+    DECLARE_CLASS(wxGxNGWRootUI)
+public:
+    wxGxNGWRootUI(wxGxObject *oParent, const wxString &soName = wxEmptyString, const CPLString &soPath = "", const wxIcon &icLargeIcon = wxNullIcon, const wxIcon &icSmallIcon = wxNullIcon, const wxIcon &icLargeLayerIcon = wxNullIcon, const wxIcon &icSmallLayerIcon = wxNullIcon);
+    virtual ~wxGxNGWRootUI(void);
+    //IGxObjectUI
+    virtual wxIcon GetLargeImage(void);
+    virtual wxIcon GetSmallImage(void);
+    virtual wxString ContextMenu(void) const { return wxString(wxT("wxGxNGWLayersUI.ContextMenu")); };
+    virtual wxString NewMenu(void) const { return wxString(wxT("wxGxNGWLayersUI.NewtMenu")); };
+protected:
+    virtual wxGxObject* AddLayer(const wxString &sName, int nId);
+    virtual wxGxObject* AddLayerGroup(const wxJSONValue &Data, const wxString &sName, int nId);
+protected:
+    wxIcon m_icLargeIcon, m_icSmallIcon;
+    wxIcon m_icLargeLayerIcon, m_icSmallLayerIcon;
+};
+
+
 /** @class wxGxNGWLayersUI
 
     A NextGIS Web Service Layers GxObjectUI.
@@ -198,6 +230,7 @@ public:
     virtual wxString NewMenu(void) const { return wxString(wxT("wxGxNGWLayersUI.NewtMenu")); };
 protected:
     virtual wxGxObject* AddLayer(const wxString &sName, int nId);
+    virtual wxGxObject* AddLayerGroup(const wxJSONValue &Data, const wxString &sName, int nId);
 protected:
     wxIcon m_icLargeIcon, m_icSmallIcon;
     wxIcon m_icLargeLayerIcon, m_icSmallLayerIcon;

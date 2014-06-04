@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -154,7 +154,7 @@ wxGISDataset* const wxGxMLDatasetUI::GetDataset(bool bCache, ITrackCancel* const
 
     if(pwxGISFeatureDataset && !pwxGISFeatureDataset->IsOpened())
     {
-        if(!pwxGISFeatureDataset->Open(0, 0, bCache, pTrackCancel))
+        if (!pwxGISFeatureDataset->Open(0, TRUE, bCache, pTrackCancel))
         {
 		    const char* err = CPLGetLastErrorMsg();
 			wxString sErr = wxString::Format(_("Operation '%s' failed! GDAL error: %s"), _("Open"), wxString(err, wxConvUTF8).c_str());

@@ -1,13 +1,13 @@
 /******************************************************************************
  * Project:  wxGIS (Task Manager)
  * Purpose:  Task and TaskCategoryList classes.
- * Author:   Bishop (aka Barishnikov Dmitriy), polimax@mail.ru
+ * Author:   Dmitry Barishnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2012-2013 Bishop
+*   Copyright (C) 2012-2014 Dmitry Barishnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -33,8 +33,11 @@ class wxGISTaskBase;
 WX_DECLARE_HASH_MAP( int, wxGISTaskBase*, wxIntegerHash, wxIntegerEqual, wxGISTaskMap );
 
 
-/** \class wxGISTaskBase task.h
-    \brief The base task class.
+/** @class wxGISTaskBase
+
+    The base task class.
+
+    @library{gp}
 */
 
 class wxGISTaskBase : 
@@ -81,8 +84,11 @@ class wxGISTask;
 
 WX_DEFINE_ARRAY(wxGISTask *, wxGISQueredTasksArray);
 
-/** \class wxGISTask task.h
-    \brief The task class.
+/** @class wxGISTask
+
+    The task class.
+
+    @library{gp}
 */
 
 class wxGISTask : 
@@ -149,8 +155,11 @@ protected:
     //wxVector<MESSAGE> m_staMessages;
 };
 
-/** \class wxGISTaskCategory task.h
-    \brief The tasks category class.
+/** @class wxGISTaskCategory
+
+    The tasks category class.
+
+    @libray{gp}
 */
 
 class wxGISTaskCategory : 

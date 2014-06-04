@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -86,7 +86,7 @@ bool wxGISNetServerConnection::ProcessInputNetMessage(void)
         return false;
     }
 
-    if(m_pSock->WaitForRead(WAITFOR))
+    if(m_pSock->WaitForRead(0, WAITFOR))
     {
         wxJSONValue  value;
         wxJSONReader reader;
@@ -94,6 +94,13 @@ bool wxGISNetServerConnection::ProcessInputNetMessage(void)
 #ifdef USE_STREAMS
         wxSocketInputStream in(*m_pSock);
         int numErrors = reader.Parse(in, &value);
+#ifdef _DEBUG
+        //wxString sOut;
+        //wxJSONWriter writer(wxJSONWRITER_NONE);
+        //writer.Write(value, sOut);
+        //wxLogMessage(sOut);
+#endif // _DEBUG
+
 #else
         RtlZeroMemory(m_Buffer, sizeof(m_Buffer));
         wxUint32 nRead(0);
@@ -126,7 +133,7 @@ bool wxGISNetServerConnection::ProcessInputNetMessage(void)
         if(msg.GetCommand() == enumGISNetCmdHello)
         {
             wxJSONValue val = msg.GetValue();
-            if(!val.IsValid())
+            if (!val.IsValid() && !val.HasMember(wxT("auth")))
                 return false;
             wxString sUser = val[wxT("auth")][wxT("user")].AsString();
             wxString sPass = val[wxT("auth")][wxT("pass")].AsString();
@@ -140,14 +147,14 @@ bool wxGISNetServerConnection::ProcessInputNetMessage(void)
 
                 wxLogMessage(_("wxGISNetServerConnection: New client connection accepted from %s:%d"), addr.IPAddress().c_str(), addr.Service());
         
-                wxNetMessage msgout(enumGISNetCmdHello, enumGISNetCmdStAccept, enumGISPriorityHighest);
+                wxNetMessage msgout(enumGISNetCmdHello, enumGISNetCmdStAccept, enumGISPriorityHigh);
                 msgout.SetMessage(_("Connection accepted"));
                 SendNetMessageAsync(msgout);
 			}
 			else
 			{
 				wxLogMessage(_("wxGISNetServerConnection: To many connections! Connection to address - %s is not established"), addr.IPAddress().c_str());
-                wxNetMessage msgout(enumGISNetCmdHello, enumGISNetCmdStRefuse, enumGISPriorityHighest);
+                wxNetMessage msgout(enumGISNetCmdHello, enumGISNetCmdStRefuse, enumGISPriorityHigh);
                 msgout.SetMessage(_("To many connections or login/password is incorrect!"));
                 SendNetMessageAsync(msgout);
                 //disconnect automatically by timer

@@ -3,11 +3,11 @@
  * Purpose:  wxGISToolExecuteView class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2010-2011 Bishop
+*   Copyright (C) 2010-2011,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -69,6 +69,8 @@ WXDLLIMPEXP_GIS_GPU int wxCALLBACK GxTaskCompareFunction(wxIntPtr item1, wxIntPt
 IMPLEMENT_CLASS(wxGISToolExecuteView, wxListCtrl)
 
 BEGIN_EVENT_TABLE(wxGISToolExecuteView, wxListCtrl)
+    EVT_LIST_BEGIN_LABEL_EDIT(TOOLEXECUTECTRLID, wxGISToolExecuteView::OnBeginLabelEdit)
+    EVT_LIST_END_LABEL_EDIT(TOOLEXECUTECTRLID, wxGISToolExecuteView::OnEndLabelEdit)
     EVT_LIST_ITEM_SELECTED(TOOLEXECUTECTRLID, wxGISToolExecuteView::OnSelected)
     EVT_LIST_ITEM_DESELECTED(TOOLEXECUTECTRLID, wxGISToolExecuteView::OnDeselected)
     EVT_LIST_ITEM_ACTIVATED(TOOLEXECUTECTRLID, wxGISToolExecuteView::OnActivated)
@@ -535,7 +537,7 @@ void wxGISToolExecuteView::OnBeginDrag(wxListEvent& event)
     wxGxObject* pGxObject = m_pCatalog->GetRegisterObject(m_nParentGxObjectId);
     if(!pGxObject)
         return;
-    wxGISTaskDataObject DragData(wxThread::GetMainId(), wxDataFormat(wxT("application/x-vnd.wxgis.gxtask-id")));
+    wxGISTaskDataObject DragData(wxThread::GetMainId(), wxDataFormat(wxGIS_DND_ID));
 
 
     long nItem = wxNOT_FOUND;
@@ -695,6 +697,7 @@ void wxGISToolExecuteView::OnLeave()
 {
     SetItemState(m_HighLightItem, 0, wxLIST_STATE_DROPHILITED);
 }
+
 
 /*
 #include "wxgis/geoprocessingui/gptoolbox.h"

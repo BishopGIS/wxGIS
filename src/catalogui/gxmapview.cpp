@@ -3,11 +3,11 @@
  * Purpose:  wxGxMapView class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009-2013 Bishop
+*   Copyright (C) 2009-2013 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -31,9 +31,9 @@
 // wxGxMapView
 //-------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxGxMapView, wxGISMapView)
+IMPLEMENT_DYNAMIC_CLASS(wxGxMapView, wxGISDrawingMapView)
 
-BEGIN_EVENT_TABLE(wxGxMapView, wxGISMapView)
+BEGIN_EVENT_TABLE(wxGxMapView, wxGISDrawingMapView)
 	EVT_LEFT_DOWN(wxGxMapView::OnMouseDown)
 	EVT_MIDDLE_DOWN(wxGxMapView::OnMouseDown)
 	EVT_RIGHT_DOWN(wxGxMapView::OnMouseDown)
@@ -47,14 +47,16 @@ BEGIN_EVENT_TABLE(wxGxMapView, wxGISMapView)
 	EVT_GXSELECTION_CHANGED(wxGxMapView::OnSelectionChanged)
 END_EVENT_TABLE()
 
-wxGxMapView::wxGxMapView(void) : wxGISMapView(), wxGxView()
+wxGxMapView::wxGxMapView(void) : wxGISDrawingMapView(), wxGxView()
 {
+    m_nPanCmdId = wxNOT_FOUND;
     m_nParentGxObjectID = wxNOT_FOUND;
     m_ConnectionPointSelectionCookie = m_ConnectionPointCatalogCookie = wxNOT_FOUND;
 }
 
-wxGxMapView::wxGxMapView(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size) : wxGISMapView(parent, id, pos, size), m_pStatusBar(NULL)
+wxGxMapView::wxGxMapView(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size) : wxGISDrawingMapView(parent, id, pos, size), m_pStatusBar(NULL)
 {
+    m_nPanCmdId = wxNOT_FOUND;
     m_nParentGxObjectID = wxNOT_FOUND;
 	m_sViewName = wxString(_("Geography View"));
     m_ConnectionPointSelectionCookie = m_ConnectionPointCatalogCookie = wxNOT_FOUND;
@@ -76,13 +78,21 @@ bool wxGxMapView::Activate(IApplication* const pApplication, wxXmlNode* const pC
 	if(!wxGxView::Activate(pApplication, pConf))
 		return false;
 	//Serialize(m_pXmlConf, false);
-    
-    //TODO: get/store from/in config, set from property page
-	m_CFormat.Create(wxString(wxT("X: dd.dddd[ ]Y: dd.dddd")));
 
     m_pApp = dynamic_cast<wxGxApplication*>(pApplication);
     if(!m_pApp)
         return false;
+
+    //get/store from/in config, set from property page
+    wxGISAppConfig oConfig = GetConfig();
+    if (oConfig.IsOk())
+    {
+        m_CFormat.Create(oConfig.Read(enumGISHKCU, m_pApp->GetAppName() + wxString(wxT("/statusbar/coord/format_mask")), wxT("X: dd.dddd[ ]Y: dd.dddd")));
+    }
+    else
+    {
+	    m_CFormat.Create(wxString(wxT("X: dd.dddd[ ]Y: dd.dddd")));
+    }
 
     m_pSelection = m_pApp->GetGxSelection();
 
@@ -98,6 +108,10 @@ bool wxGxMapView::Activate(IApplication* const pApplication, wxXmlNode* const pC
 	m_pStatusBar = m_pApp->GetStatusBar();
 
 	SetTrackCancel(new wxGxTrackCancel(m_pStatusBar));
+
+    //find pan cmd
+    wxGISCommand *pPanCmd = m_pApp->GetCommand(wxT("wxGISCartoMainTool"), 2);
+    m_nPanCmdId = pPanCmd->GetId();
 	return true;
 }
 
@@ -122,7 +136,7 @@ bool wxGxMapView::Applies(wxGxSelection* const Selection)
 	for(size_t i = 0; i < Selection->GetCount(); ++i)
 	{
         wxGxObject* pGxObject = m_pCatalog->GetRegisterObject(Selection->GetSelectedObjectId(i));
-		wxGxDataset* pGxDataset = wxDynamicCast(pGxObject, wxGxDataset);
+        IGxDataset* pGxDataset = dynamic_cast<IGxDataset*>(pGxObject);
 		if(pGxDataset != NULL)
 		{
 			wxGISEnumDatasetType type = pGxDataset->GetType();
@@ -136,21 +150,6 @@ bool wxGxMapView::Applies(wxGxSelection* const Selection)
 				break;
 			}
 		}
- 		wxGxDatasetContainer* pGxDatasetContainer = wxDynamicCast(pGxObject, wxGxDatasetContainer);
-		if(pGxDatasetContainer != NULL)
-		{
-			wxGISEnumDatasetType type = pGxDatasetContainer->GetType();
-			switch(type)
-			{
-			case enumGISRasterDataset:
-			case enumGISFeatureDataset:
-			case enumGISContainer:
-				return true;
-			case enumGISTableDataset:
-				break;
-			}
-		}
-       
 	}
 	return false;
 }
@@ -172,7 +171,7 @@ void wxGxMapView::OnSelectionChanged(wxGxSelectionEvent& event)
         bool bIsCached = true;
         for(size_t i = 0; i < GetLayerCount(); ++i)
         {
-            wxGISLayer* const pLayer = GetLayer(i);
+            wxGISLayer* const pLayer = GetLayerByIndex(i);
             if(pLayer)
             {
                 wxGISDataset* pDSet = pLayer->GetDataset();
@@ -192,7 +191,7 @@ void wxGxMapView::OnSelectionChanged(wxGxSelectionEvent& event)
     {
         for(size_t i = 0; i < GetLayerCount(); ++i)
         {
-            wxGISLayer* const pLayer = GetLayer(i);
+            wxGISLayer* const pLayer = GetLayerByIndex(i);
             if(pLayer)
             {
                 wxGISDataset* pDSet = pLayer->GetDataset();
@@ -223,7 +222,7 @@ wxGISLayer* wxGxMapView::GetLayerFromDataset(wxGxDataset* const pGxDataset)
 		{
 			wxGISFeatureDataset* pGISFeatureDataset = wxDynamicCast(pwxGISDataset, wxGISFeatureDataset);
 			if(!pGISFeatureDataset->IsOpened())
-				pGISFeatureDataset->Open(0, 0, true, m_pTrackCancel);
+                pGISFeatureDataset->Open(0, TRUE, true, m_pTrackCancel);
 			if(!pGISFeatureDataset->IsCached())
 				pGISFeatureDataset->Cache(m_pTrackCancel);
 			wxGISFeatureLayer* pGISFeatureLayer = new wxGISFeatureLayer(pwxGISDataset->GetName(), pwxGISDataset);
@@ -318,6 +317,8 @@ void wxGxMapView::LoadLayers(wxGxDatasetContainer* const pGxDataset)
 void wxGxMapView::LoadData(long nGxObjectId)
 {
     wxGxObject* pGxObject = m_pCatalog->GetRegisterObject(nGxObjectId);
+    if (NULL == pGxObject)
+        return;
 
 	if(m_pStatusBar)
     {
@@ -382,6 +383,16 @@ void wxGxMapView::OnMouseDoubleClick(wxMouseEvent& event)
 	if(m_pApp)
 		m_pApp->OnMouseDoubleClick(event);
 	event.Skip();
+}
+
+
+void wxGxMapView::OnShow(bool bShow)
+{
+    if (bShow && wxNOT_FOUND != m_nPanCmdId)
+    {
+        wxCommandEvent event(wxEVT_MENU, m_nPanCmdId);
+        m_pApp->ProcessWindowEvent(event);
+    }
 }
 
 //typedef struct OvrProgressData

@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -259,7 +259,7 @@ void wxGISDTPath::OnOpen(wxCommandEvent& event)
 
             wxString sExt = pDomain->GetFilter(m_pParam->GetSelDomainValue())->GetExt();
             wxFileName FName(sPath);
-            FName.SetExt(sExt.Right(sExt.Len() - 1));
+            FName.SetExt(sExt);
             sPath = FName.GetFullPath();
 
             m_pParam->SetAltered(true);
@@ -410,7 +410,7 @@ void wxGISDTPath::OnLeave()
 bool wxGISDTPath::CanPaste()
 {
     wxClipboardLocker lockClip;
-    return wxTheClipboard->IsSupported(wxDF_FILENAME) | wxTheClipboard->IsSupported(wxDataFormat(wxT("application/x-vnd.wxgis.gxobject-name")));
+    return wxTheClipboard->IsSupported(wxDF_FILENAME) | wxTheClipboard->IsSupported(wxDataFormat(wxGIS_DND_NAME));
     //& wxTheClipboard->IsSupported(wxDF_TEXT); | wxDF_BITMAP | wxDF_TIFF | wxDF_DIB | wxDF_UNICODETEXT | wxDF_HTML
 }
 

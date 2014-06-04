@@ -3,11 +3,11 @@
  * Purpose:  Catalog main header.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009-2012 Bishop
+*   Copyright (C) 2009-2012 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -40,8 +40,11 @@ enum wxGISEnumSaveObjectResults
 	enumGISSaveObjectDeny = 0x0004
 };
 
-/** \class IGxObjectEdit catalog.h
-    \brief A GxObject edit interface.
+/** @class IGxObjectEdit
+
+    A GxObject edit interface.
+
+    @library{catalog}
 */
 
 class IGxObjectEdit
@@ -49,17 +52,20 @@ class IGxObjectEdit
 public:
 	virtual ~IGxObjectEdit(void){};
 	virtual bool Delete(void){return false;};
-	virtual bool CanDelete(void){return false;};
+    virtual bool CanDelete(void){ return false; };
 	virtual bool Rename(const wxString& NewName){return false;};
-	virtual bool CanRename(void){return false;};
+    virtual bool CanRename(void){ return false; };
 	virtual bool Copy(const CPLString &szDestPath, ITrackCancel* const pTrackCancel){return false;};
-	virtual bool CanCopy(const CPLString &szDestPath){return false;};
+    virtual bool CanCopy(const CPLString &szDestPath){ return false; };
 	virtual bool Move(const CPLString &szDestPath, ITrackCancel* const pTrackCancel){return false;};
 	virtual bool CanMove(const CPLString &szDestPath){return false;};
 };
 
-/** \class IGxRootObjectProperties catalog.h
-    \brief A Interface class for Root GxObject.
+/** @class IGxRootObjectProperties
+    
+    An Interface class for Root GxObject.
+
+    @library{catalog}
 */
 
 class IGxRootObjectProperties
@@ -70,8 +76,11 @@ public:
 	virtual void Serialize(wxXmlNode* const pConfigNode) = 0;
 };
 
-/** \class IGxRemoteConnection catalog.h
-    \brief A GxObject remote connection interface.
+/** @class IGxRemoteConnection
+
+    A GxObject remote connection interface.
+
+    @library{catalog}
 */
 
 class IGxRemoteConnection
@@ -83,8 +92,11 @@ public:
     virtual bool IsConnected(void) = 0;
 };
 
-/** \class IGxDataset catalog.h
-    \brief A GxObject dataset interface.
+/** @class IGxDataset
+
+    A GxObject dataset interface.
+
+    @library{catalog}
 */
 
 class IGxDataset
@@ -97,11 +109,12 @@ public:
     virtual wxULongLong GetSize(void) const = 0;
     virtual wxDateTime GetModificationDate(void) const = 0;
     virtual void FillMetadata(bool bForce = false) = 0;
+    virtual bool IsMetadataFilled() const = 0;
 };
 
 /** @class IGxObjectNoFilter
 
-    A Interface class indicates show object on all views (e.g. Open/Save dialog).
+    An Interface class indicates show object on all views (e.g. Open/Save dialog).
 
     @library{catalog}
 */

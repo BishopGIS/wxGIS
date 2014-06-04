@@ -3,11 +3,11 @@
  * Purpose:  wxGxArchive classes.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009,2011,2013 Bishop
+*   Copyright (C) 2009,2011,2013,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -21,8 +21,11 @@
 #pragma once
 #include "wxgis/catalog/gxfolder.h"
 
-/** \class wxGxArchiveFolder gxarchfolder.h
-    \brief The Archive Folder GxObject.
+/** @class wxGxArchiveFolder
+    
+    The Archive Folder GxObject.
+
+    @library{catalog}
 */
 
 class WXDLLIMPEXP_GIS_CLT wxGxArchiveFolder :
@@ -30,21 +33,26 @@ class WXDLLIMPEXP_GIS_CLT wxGxArchiveFolder :
 {
     DECLARE_CLASS(wxGxArchiveFolder)
 public:
+    wxGxArchiveFolder(void);
 	wxGxArchiveFolder(wxGxObject *oParent, const wxString &soName = wxEmptyString, const CPLString &soPath = "");
 	virtual ~wxGxArchiveFolder(void);
 	//wxGxObject
 	virtual wxString GetCategory(void) const {return wxString(_("Archive folder"));};
 	//IGxObjectEdit unsupported yet
 	virtual bool CanDelete(void){return false;};
-	virtual bool CanRename(void){return false;};
+    virtual bool CanRename(void){ return false; };
     //wxGxArchiveFolder
 protected:
     virtual wxGxObject* GetArchiveFolder(wxGxObject *oParent, const wxString &soName = wxEmptyString, const CPLString &soPath = "");
 	virtual void LoadChildren(void);
+    virtual bool IsArchive(void) const;
 };
 
-/** \class wxGxArchive gxarchfolder.h
-    \brief The Archive GxObject.
+/** @class wxGxArchive
+
+    The Archive GxObject.
+
+    @library{catalog}
 */
 
 class WXDLLIMPEXP_GIS_CLT wxGxArchive :

@@ -3,11 +3,11 @@
  * Purpose:  GxPostGISDatasetUI classes.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2011,2013 Bishop
+*   Copyright (C) 2011,2013,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -27,8 +27,11 @@
 
 #include "wxgis/catalog/gxpostgisdataset.h"
 
-/** \class wxGxPostGISTableDatasetUI gxpostgisdatasetui.h
-    \brief A PostGIS Table Dataset GxObjectUI.
+/** @class wxGxPostGISTableDatasetUI
+
+    A PostGIS Table Dataset GxObjectUI.
+
+    @library{catalogui}
 */
 
 class WXDLLIMPEXP_GIS_CLU wxGxPostGISTableDatasetUI :
@@ -51,8 +54,11 @@ protected:
     wxIcon m_LargeIcon, m_SmallIcon;
 };
 
-/** \class wxGxPostGISFeatureDatasetUI gxpostgisdatasetui.h
-    \brief A PostGIS Table Dataset GxObjectUI.
+/** @class wxGxPostGISFeatureDatasetUI
+
+    A PostGIS Table Dataset GxObjectUI.
+
+    @library{catalogui}
 */
 
 class WXDLLIMPEXP_GIS_CLU wxGxPostGISFeatureDatasetUI :

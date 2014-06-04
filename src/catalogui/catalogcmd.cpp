@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -328,7 +328,7 @@ bool wxGISCatalogMainCmd::GetEnabled(void)
                 for(size_t i = 0; i < pSel->GetCount(); ++i)
                 {
                     wxGxObject* pGxObject = pCat->GetRegisterObject(pSel->GetSelectedObjectId(i));
-					IGxObjectEdit* pGxObjectEdit = dynamic_cast<IGxObjectEdit*>(pGxObject);
+                    IGxObjectEdit* pGxObjectEdit = dynamic_cast<IGxObjectEdit*>(pGxObject);
                     if(pGxObjectEdit && pGxObjectEdit->CanCopy(""))
                         return true;
                 }
@@ -367,7 +367,7 @@ bool wxGISCatalogMainCmd::GetEnabled(void)
                         {
                             if(data.GetText() == wxString(wxT("cut")))
                                 bMove = true;
-                        }                    
+                        }
                     }
 
                     for(size_t i = 0; i < pSel->GetCount(); ++i)
@@ -660,11 +660,15 @@ void wxGISCatalogMainCmd::OnClick(void)
             {
                 wxDataObjectComposite *pDragData = new wxDataObjectComposite();
 
-                wxGISStringDataObject *pNamesData = new wxGISStringDataObject(wxDataFormat(wxT("application/x-vnd.wxgis.gxobject-name")));
+                wxGISStringDataObject *pNamesData = new wxGISStringDataObject(wxDataFormat(wxGIS_DND_NAME));
                 pDragData->Add(pNamesData, true);
 
                 wxFileDataObject *pFileData = new wxFileDataObject();
                 pDragData->Add(pFileData, false);
+
+                wxTextDataObject *pTextData = new wxTextDataObject();
+                wxString sText;
+                pDragData->Add(pTextData, false);
 
                 for(size_t i = 0; i < pSel->GetCount(); ++i)
                 {
@@ -675,8 +679,14 @@ void wxGISCatalogMainCmd::OnClick(void)
 
                         pFileData->AddFile(sSystemPath);
                         pNamesData->AddString(pGxObject->GetFullName());
+
+                        sText.Append(sSystemPath);
+                        sText.Append(wxT("\n"));
                     }
                 }
+
+                pTextData->SetText(sText);
+
                 //! Lock clipboard
                 wxClipboardLocker locker;
                 if(!locker)
@@ -695,7 +705,7 @@ void wxGISCatalogMainCmd::OnClick(void)
             {
                 wxDataObjectComposite *pDragData = new wxDataObjectComposite();
 
-                wxGISStringDataObject *pNamesData = new wxGISStringDataObject(wxDataFormat(wxT("application/x-vnd.wxgis.gxobject-name")));
+                wxGISStringDataObject *pNamesData = new wxGISStringDataObject(wxDataFormat(wxGIS_DND_NAME));
                 pDragData->Add(pNamesData, true);
 
                 wxFileDataObject *pFileData = new wxFileDataObject();
@@ -733,33 +743,55 @@ void wxGISCatalogMainCmd::OnClick(void)
                 IGxDropTarget* pTarget = dynamic_cast<IGxDropTarget*>(pCat->GetRegisterObject(pSel->GetFirstSelectedObjectId()));
                 if(!pTarget)
                     return;
-                wxClipboardLocker locker;
-                if(!locker)
-                    wxMessageBox(_("Can't open clipboard"), _("Error"), wxOK | wxICON_ERROR);
-                else
+
+                bool bMove(false);
+
+                if(wxTheClipboard->Open())
                 {
                     wxTextDataObject data;
-                    bool bMove(false);
+
                     if(wxTheClipboard->GetData( data ))
                     {
                         if(data.GetText() == wxString(wxT("cut")))
                             bMove = true;
                     }
+                    wxTheClipboard->Close();
+                }
+                else
+                {
+                     wxMessageBox(_("Can't open clipboard"), _("Error"), wxOK | wxICON_ERROR);
+                }
 
-                    wxGISStringDataObject data_names(wxDataFormat(wxT("application/x-vnd.wxgis.gxobject-name")));
+                if(wxTheClipboard->Open())
+                {
+                    wxGISStringDataObject data_names(wxDataFormat(wxGIS_DND_NAME));
                     if(wxTheClipboard->GetData( data_names ))
                     {
+                        wxTheClipboard->Close();
                         pTarget->Drop(data_names.GetStrings(), bMove);
                         return;
                     }                    
+                }
+                else
+                {
+                     wxMessageBox(_("Can't open clipboard"), _("Error"), wxOK | wxICON_ERROR);
+                }
 
+                if(wxTheClipboard->Open())
+                {
                     wxFileDataObject filedata;
                     if( wxTheClipboard->GetData( filedata ) )
                     {
+                        wxTheClipboard->Close();
                         pTarget->Drop(wxGISDropTarget::PathsToNames(filedata.GetFilenames()), bMove);
                         return;
                     }
                 }
+                else
+                {
+                     wxMessageBox(_("Can't open clipboard"), _("Error"), wxOK | wxICON_ERROR);
+                }
+
             }
             return;
         case 7:
@@ -787,6 +819,7 @@ void wxGISCatalogMainCmd::OnClick(void)
         case 14:
             if (NULL != pSel && NULL != pCat)
             {
+#ifdef wxGIS_USE_EMAIL
                 //create temp zip
                 CPLString szZipFileName = CPLResetExtension(CPLGenerateTempFilename("email"), "zip");
                 void* hZIP = CPLCreateZip(szZipFileName, NULL);
@@ -794,7 +827,7 @@ void wxGISCatalogMainCmd::OnClick(void)
                 if (!hZIP) 
                 {
                     wxMessageBox(_("Create zip failed!"), _("Error"), wxICON_ERROR | wxOK );
-                    CPLError(CE_Failure, CPLE_NoWriteAccess, "ERROR creating %s", szZipFileName);
+                    CPLError(CE_Failure, CPLE_NoWriteAccess, "ERROR creating %s", szZipFileName.c_str());
                     return;
                 }
 
@@ -809,13 +842,13 @@ void wxGISCatalogMainCmd::OnClick(void)
 
                 CPLCloseZip(hZIP);
 
-                wxString sContents(_("This e-mail include spatial data in archive : \r\n"));
+                wxString sContents(_("This e-mail include spatial data in archive : \n"));
                 for (size_t i = 0; i < saPaths.GetCount(); ++i)
                 {
                     sContents += saPaths[i];
                     sContents.Append(wxT("\r\n"));
                 }
-                sContents.Append(wxT("--------------------------------------------\r\n"));
+                sContents.Append(wxT("--------------------------------------------\n"));
                 sContents.Append(_("Created by NextGIS Manager"));
                 //send zip via e-mail
                 wxString sArchiveName = wxDateTime::Now().Format(wxT("spatial_data_%Y%m%d.zip"));
@@ -823,13 +856,56 @@ void wxGISCatalogMainCmd::OnClick(void)
                 wxEmail email;
 
                 email.Send(msg);
-
+#endif //wxGIS_USE_EMAIL
                 return;
             }
         case 3:
 		default:
 			return;
 	}
+}
+
+void wxGISCatalogMainCmd::AddFileToZip(const CPLString &szPath, void* hZIP, GByte **pabyBuffer, size_t nBufferSize, const CPLString &szPrependPath, const wxString &sCharset)
+{
+    int nRet = 0;
+    size_t nBytesRead;
+    VSILFILE *fp;
+
+    CPLString szName;
+    if (szPrependPath.empty())
+    {
+        szName = CPLGetFilename(szPath);
+    }
+    else
+    {
+        szName += szPrependPath;
+        szName += "/";
+        szName += CPLGetFilename(szPath);
+    }
+
+    szName = CPLString(wxString(szName, wxConvUTF8).mb_str(wxCSConv(sCharset)));
+
+    fp = VSIFOpenL(szPath, "rb");
+    if (fp == NULL)
+        return;
+
+    if (CPLCreateFileInZip(hZIP, szName, NULL) == CE_None)
+    {
+        do {
+            nBytesRead = VSIFReadL(*pabyBuffer, 1, nBufferSize, fp);
+            if (long(nBytesRead) < 0)
+                nRet = -1;
+
+            if (nRet == 0 && CPLWriteFileInZip(hZIP, *pabyBuffer, nBytesRead) != CE_None)
+                nRet = -1;
+        } while (nRet == 0 && nBytesRead == nBufferSize);
+
+    }
+
+    //    CPLError(CE_Failure, CPLE_FileIO, "ERROR adding %s to zip", szName);
+    CPLCloseFileInZip(hZIP);
+    VSIFCloseL(fp);
+
 }
 
 bool wxGISCatalogMainCmd::AddGxObjectToZip(wxArrayString &saPaths, void* hZIP, wxGxObject* pGxObject, const CPLString &szPath)
@@ -853,6 +929,12 @@ bool wxGISCatalogMainCmd::AddGxObjectToZip(wxArrayString &saPaths, void* hZIP, w
             return false;
         }
 
+        wxGISDataset* pDS = pGxDS->GetDataset(false);
+        if (NULL == pDS)
+        {
+            return false;
+        }
+
         wxString sCharset(wxT("cp-866"));
         wxGISAppConfig oConfig = GetConfig();
         if (oConfig.IsOk())
@@ -861,61 +943,61 @@ bool wxGISCatalogMainCmd::AddGxObjectToZip(wxArrayString &saPaths, void* hZIP, w
         wxString sName = pGxDS->GetName();
         saPaths.Add(sName);
 
-        wxGISDataset* pDS = pGxDS->GetDataset(false);
-        if (NULL == pDS)
-        {
-            return false;
-        }
-
-        VSILFILE *fp;
         size_t nBufferSize = 1024 * 1024;
         GByte *pabyBuffer = (GByte *)CPLMalloc(nBufferSize);
-        size_t nBytesRead;
         
         char** papszFileList = pDS->GetFileList();
         papszFileList = CSLAddString(papszFileList, pDS->GetPath());
         for (int i = 0; papszFileList[i] != NULL; ++i)
         {
-            int nRet = 0;
-
-            CPLString szName;
-            if (szPath.empty())
-            {
-                szName = CPLGetFilename(papszFileList[i]);
-            }
-            else
-            {
-                szName += szPath;
-                szName += "/";
-                szName += CPLGetFilename(papszFileList[i]);
-            }
-
-            szName = CPLString(wxString(szName, wxConvUTF8).mb_str(wxCSConv(sCharset)));
-
-            fp = VSIFOpenL(papszFileList[i], "rb");
-            if (fp == NULL)
-                continue;
-
-            if (CPLCreateFileInZip(hZIP, szName, NULL) == CE_None)
-            {
-                do {
-                    nBytesRead = VSIFReadL(pabyBuffer, 1, nBufferSize, fp);
-                    if (long(nBytesRead) < 0)
-                        nRet = -1;
-
-                    if (nRet == 0 && CPLWriteFileInZip(hZIP, pabyBuffer, nBytesRead) != CE_None)
-                        nRet = -1;
-                } while (nRet == 0 && nBytesRead == nBufferSize);
-
-            }
-                
-            //    CPLError(CE_Failure, CPLE_FileIO, "ERROR adding %s to zip", szName);
-            CPLCloseFileInZip(hZIP);
-            VSIFCloseL(fp);
+            AddFileToZip(papszFileList[i], hZIP, &pabyBuffer, nBufferSize, szPath, sCharset);
         }
 
         CPLFree(pabyBuffer);
         CSLDestroy(papszFileList);
+    }
+    else if (pGxObject->IsKindOf(wxCLASSINFO(wxGxDatasetContainer)))
+    {
+        wxGxDatasetContainer* pGxDS = wxDynamicCast(pGxObject, wxGxDatasetContainer);
+        if (NULL == pGxDS)
+        {
+            return false;
+        }
+        
+        if (!IsFileDataset(pGxDS->GetType(), pGxDS->GetSubType()))
+        {
+            return false;
+        }
+
+        wxString sCharset(wxT("cp-866"));
+        wxGISAppConfig oConfig = GetConfig();
+        if (oConfig.IsOk())
+            sCharset = oConfig.Read(enumGISHKCU, wxString(wxT("wxGISCommon/zip/charset")), sCharset);
+
+        if (pGxDS->GetType() == enumGISFeatureDataset && (pGxDS->GetSubType() == enumVecKML || pGxDS->GetSubType() == enumVecKMZ || pGxDS->GetSubType() == enumVecGML))
+        {
+            size_t nBufferSize = 1024 * 1024;
+            GByte *pabyBuffer = (GByte *)CPLMalloc(nBufferSize);
+            AddFileToZip(pGxObject->GetPath(), hZIP, &pabyBuffer, nBufferSize, szPath, sCharset);
+            CPLFree(pabyBuffer);
+        }
+        else if (pGxDS->GetType() == enumContGDBFolder)
+        {
+            CPLString szNewPath;
+            szNewPath = CPLString(pGxObject->GetName().mb_str(wxConvUTF8));
+
+            size_t nBufferSize = 1024 * 1024;
+            GByte *pabyBuffer = (GByte *)CPLMalloc(nBufferSize);
+            char** papszFileList = CPLReadDir(pGxObject->GetPath());
+            for (int i = 0; papszFileList[i] != NULL; ++i)
+            {
+                AddFileToZip(papszFileList[i], hZIP, &pabyBuffer, nBufferSize, szNewPath, sCharset);
+            }
+
+            CPLFree(pabyBuffer);
+            CSLDestroy(papszFileList);
+        }
+
     }
     else if (pGxObject->IsKindOf(wxCLASSINFO(wxGxFolder)))
     {

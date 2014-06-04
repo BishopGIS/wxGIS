@@ -3,11 +3,11 @@
  * Purpose:  wxGxCatalog class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009-2013 Bishop
+*   Copyright (C) 2009-2013 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -75,7 +75,8 @@ void wxGxCatalog::LoadChildren(void)
 
 void wxGxCatalog::LoadChildren(wxXmlNode* const pNode)
 {
-    wxCHECK_RET(pNode, wxT("Intput config xml node is null"));
+    if (NULL == pNode)
+        return;
 
 	wxXmlNode* pChildren = pNode->GetChildren();
 	while(pChildren)
@@ -247,7 +248,7 @@ void wxGxCatalog::EnableRootItem(size_t nItemId, bool bEnable)
 
 bool wxGxCatalog::Destroy(void)
 {
-    m_pPointsArray.clear();
+    //m_pPointsArray.clear();
 
     //store to config values
 	wxGISAppConfig oConfig = GetConfig();
@@ -299,7 +300,7 @@ wxGxObjectFactory* const wxGxCatalog::GetObjectFactoryByClassName(const wxString
 {
     for(size_t i = 0; i < m_ObjectFactoriesArray.size(); ++i)
     {
-        if(m_ObjectFactoriesArray[i]->GetClassName().IsSameAs(sClassName))
+        if (m_ObjectFactoriesArray[i] && m_ObjectFactoriesArray[i]->GetClassName().IsSameAs(sClassName))
             return m_ObjectFactoriesArray[i];
     }
     return NULL;
@@ -309,7 +310,7 @@ wxGxObjectFactory* const wxGxCatalog::GetObjectFactoryByName(const wxString &sFa
 {
     for(size_t i = 0; i < m_ObjectFactoriesArray.size(); ++i)
     {
-        if(m_ObjectFactoriesArray[i]->GetName().IsSameAs(sFactoryName))
+        if (m_ObjectFactoriesArray[i] && m_ObjectFactoriesArray[i]->GetName().IsSameAs(sFactoryName))
             return m_ObjectFactoriesArray[i];
     }
     return NULL;
@@ -325,55 +326,4 @@ wxVector<wxGxObjectFactory*>* const wxGxCatalog::GetObjectFactories(void)
     return &m_ObjectFactoriesArray;
 }
 
-/*
-void wxGxCatalog::Detach(void)
-{
-	m_pPointsArray.clear();
 
-	m_pCatalog->UnRegisterObject(m_nID);
-
-	wxGISAppConfig oConfig = GetConfig();
-	if(oConfig.IsOk())
-	{
-		oConfig.Write(enumGISHKCU, GetConfigName() + wxString(wxT("/catalog/show_hidden")), m_bShowHidden);
-		oConfig.Write(enumGISHKCU, GetConfigName() + wxString(wxT("/catalog/show_ext")), m_bShowExt);
-
-		wxXmlNode* pNode = oConfig.GetConfigNode(enumGISHKCU, GetConfigName() + wxString(wxT("/catalog/rootitems")));
-		if(!pNode)
-			pNode = oConfig.CreateConfigNode(enumGISHKCU, GetConfigName() + wxString(wxT("/catalog/rootitems")));
-		if(pNode)
-		{
-			oConfig.DeleteNodeChildren(pNode);
-			SerializePlugins(pNode, true);
-		}
-
-		pNode = oConfig.GetConfigNode(enumGISHKCU, GetConfigName() + wxString(wxT("/catalog/objectfactories")));
-		if(!pNode)
-			pNode = oConfig.CreateConfigNode(enumGISHKCU, GetConfigName() + wxString(wxT("/catalog/objectfactories")));
-		if(pNode)
-		{
-			oConfig.DeleteNodeChildren(pNode);
-			for(int i = m_ObjectFactoriesArray.size(); i >= 0; --i)
-			{
-				wxXmlNode* pFactoryNode = new wxXmlNode(pNode, wxXML_ELEMENT_NODE, wxT("objectfactory"));
-				m_ObjectFactoriesArray[i - 1]->Serialize(pFactoryNode, true);
-			}
-		}
-	}
-
-	EmptyObjectFactories();
-	EmptyChildren();
-	EmptyDisabledChildren();
-}
-
-IGxObject* wxGxCatalog::ConnectFolder(wxString sPath, bool bSelect)
-{
-    if(m_pGxDiscConnections)
-    {
-        IGxObject* pAddedObj = m_pGxDiscConnections->ConnectFolder(sPath);
-        if(pAddedObj)
-            return pAddedObj;
-    }
-    return NULL;
-}
-*/

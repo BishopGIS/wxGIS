@@ -3,11 +3,11 @@
  * Purpose:  wxGISTask and wxGISTaskCategories classes
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2013 Bishop
+*   Copyright (C) 2013,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -24,11 +24,15 @@
 #include "wxgis/net/netevent.h"
 #include "wxgis/geoprocessing/tskmngr.h"
 #include "wxgis/core/json/jsonval.h"
+#include "wxgis/core/pointer.h"
 
 #include <wx/dynarray.h>
 
-/** \class wxGISTaskMessage task.h
-    \brief The Task message.
+/** @\class wxGISTaskMessage
+
+    The Task message.
+
+    @library{gp}
 */
 class WXDLLIMPEXP_GIS_GP wxGISTaskMessage
 {
@@ -72,8 +76,11 @@ wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_GIS_GP, wxGISTASK_DEL, wxGISTaskEvent);
 wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_GIS_GP, wxGISTASK_CHNG, wxGISTaskEvent);
 wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_GIS_GP, wxGISTASK_MESSAGEADDED, wxGISTaskEvent);
 
-/** \class wxGISTaskEvent task.h
-    \brief The Task event.
+/** @class wxGISTaskEvent
+
+    The Task event.
+
+    @library{gp}
 */
 class WXDLLIMPEXP_GIS_GP wxGISTaskEvent : public wxEvent
 {
@@ -82,9 +89,11 @@ public:
 	{        
         m_nMessageId = nMessageId;
 	}
+
 	wxGISTaskEvent(const wxGISTaskEvent& event) : wxEvent(event), m_nMessageId(event.m_nMessageId)
 	{        
 	}
+
     virtual wxEvent *Clone() const { return new wxGISTaskEvent(*this); }
     long GetMessageId(void) const {return m_nMessageId;};
 protected:
@@ -106,8 +115,11 @@ typedef void (wxEvtHandler::*wxGISTaskEventFunction)(wxGISTaskEvent&);
 class wxGISTaskBase;
 WX_DECLARE_HASH_MAP( int, wxGISTaskBase*, wxIntegerHash, wxIntegerEqual, wxGISTaskMap );
 
-/** \class wxGISTaskBase task.h
-    \brief The base task class.
+/** @class wxGISTaskBase
+
+    The base task class.
+
+    @library{gp}
 */
 
 class WXDLLIMPEXP_GIS_GP wxGISTaskBase : 
@@ -134,6 +146,7 @@ public:
     virtual int GetRunTaskCount(void) const;
     virtual void ChangeTask(const wxJSONValue &val);
     virtual void AddTask(const wxJSONValue &val);
+    virtual bool RenameTask(const wxString& sNewName);
     //
     virtual void OnSubTaskChanged(int nId);
     //NET messages
@@ -178,6 +191,7 @@ public:
     virtual void SetPriority(long nPriority);
     virtual double GetDone(void) const;
     virtual void SetState(wxGISEnumTaskStateType eState);
+    virtual int GetChildrenCount() const;
     /**\fn
      * \brief Get the Task parameters. Any additional values, to standard Name, Description, DateBegin, DateEnd, etc. 
      */
@@ -192,8 +206,8 @@ public:
     virtual wxGISTaskMessagesArray GetMessages(void) const;
     virtual wxGISTaskMessage GetMessage(long nMessageId) const;
     virtual void AddMessage(wxGISTaskMessage* pMessage);
-    virtual bool StartTask();
-    virtual bool StopTask();
+    virtual bool StartTask(bool bWait = false);
+    virtual bool StopTask(bool bWait = false);
 protected:
     virtual void NetNote(wxGISNetCommandState eCmdState, const wxJSONValue &val);
 protected:
@@ -206,10 +220,14 @@ protected:
     double m_dfDone;
     wxJSONValue m_Params;
     wxGISTaskMessagesArray m_oaMessages;
+    int m_nChildrenCount;
 };
 
-/** \class wxGISTaskEdit task.h
-    \brief The edit task class.
+/** @class wxGISTaskEdit
+
+    The edit task class.
+
+    @library{gp}
 */
 
 class WXDLLIMPEXP_GIS_GP wxGISTaskEdit : 
@@ -224,8 +242,11 @@ public:
     virtual void SetExecutable(const wxString& sExecutable);
 };
 
-/** \class wxGISTaskCategory task.h
-    \brief The tasks category class.
+/** @class wxGISTaskCategory
+
+    The tasks category class.
+
+    @library{gp}
 */
 
 class WXDLLIMPEXP_GIS_GP wxGISTaskCategory : 

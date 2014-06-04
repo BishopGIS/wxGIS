@@ -3,11 +3,11 @@
  * Purpose:  Remote Connection classes.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2011,2013,2014 Bishop
+*   Copyright (C) 2011,2013,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -24,6 +24,7 @@
 
 #include "wxgis/catalog/gxobject.h"
 #include "wxgis/catalog/gxdataset.h"
+#include "wxgis/core/json/jsonval.h"
 
 #ifdef wxGIS_USE_POSTGRES
 
@@ -62,13 +63,13 @@ public:
     virtual bool IsConnected(void);
 	//IGxObjectEdit
 	virtual bool Delete(void);
-	virtual bool CanDelete(void){return true;};
+	virtual bool CanDelete(void) {return true;};
 	virtual bool Rename(const wxString& NewName);
-	virtual bool CanRename(void){return true;};
+    virtual bool CanRename(void) { return true; };
 	virtual bool Copy(const CPLString &szDestPath, ITrackCancel* const pTrackCancel);
-	virtual bool CanCopy(const CPLString &szDestPath){return true;};
+    virtual bool CanCopy(const CPLString &szDestPath) { return true; };
 	virtual bool Move(const CPLString &szDestPath, ITrackCancel* const pTrackCancel);
-	virtual bool CanMove(const CPLString &szDestPath){return CanCopy(szDestPath) & CanDelete();};
+    virtual bool CanMove(const CPLString &szDestPath) { return CanCopy(szDestPath) & CanDelete(); };
 	//wxGxObjectContainer
 	virtual bool AreChildrenViewable(void) const {return true;};
 	//virtual bool HasChildren(void);
@@ -133,7 +134,7 @@ public:
     virtual bool CanCreate(long nDataType, long DataSubtype);
     //IGxObjectEdit
 	virtual bool Delete(void);
-	virtual bool CanDelete(void);
+    virtual bool CanDelete(void);
 	virtual bool Rename(const wxString& NewName);
     virtual bool CanRename(void);
     virtual bool Copy(const CPLString &szDestPath, ITrackCancel* const pTrackCancel);
@@ -219,13 +220,13 @@ public:
     virtual bool IsConnected(void);
     //IGxObjectEdit
     virtual bool Delete(void);
-    virtual bool CanDelete(void){ return true; };
+    virtual bool CanDelete(void) { return true; };
     virtual bool Rename(const wxString& NewName);
-    virtual bool CanRename(void){ return true; };
+    virtual bool CanRename(void) { return true; };
     virtual bool Copy(const CPLString &szDestPath, ITrackCancel* const pTrackCancel);
-    virtual bool CanCopy(const CPLString &szDestPath){ return true; };
+    virtual bool CanCopy(const CPLString &szDestPath) { return true; };
     virtual bool Move(const CPLString &szDestPath, ITrackCancel* const pTrackCancel);
-    virtual bool CanMove(const CPLString &szDestPath){ return CanCopy(szDestPath) & CanDelete(); };
+    virtual bool CanMove(const CPLString &szDestPath) { return CanCopy(szDestPath) & CanDelete(); };
     //wxGxObjectContainer
     virtual bool AreChildrenViewable(void) const { return true; };
     virtual bool HasChildren(void);
@@ -239,20 +240,20 @@ protected:
     bool m_bChildrenLoaded, m_bIsConnected;
 };
 
-/** @class wxGxNGWLayers
+/** @class wxGxNGWRoot
 
-    A NextGIS Web Service Layers GxObject.
+    A NextGIS Web Service Root Layers GxObject.
 
     @library {catalog}
 */
-class WXDLLIMPEXP_GIS_CLT wxGxNGWLayers :
+class WXDLLIMPEXP_GIS_CLT wxGxNGWRoot :
     public wxGxObjectContainer,
     public IGxObjectNoFilter
 {
-    DECLARE_CLASS(wxGxNGWService)
+    DECLARE_CLASS(wxGxNGWRoot)
 public:
-    wxGxNGWLayers(wxGxObject *oParent, const wxString &soName = _("Layers"), const CPLString &soPath = "");
-    virtual ~wxGxNGWLayers(void);
+    wxGxNGWRoot(wxGxObject *oParent, const wxString &soName = _("Layers"), const CPLString &soPath = "");
+    virtual ~wxGxNGWRoot(void);
     //wxGxObject
     virtual wxString GetCategory(void) const { return wxString(_("NGW service layers")); };
     virtual void Refresh(void);
@@ -262,6 +263,7 @@ public:
 protected:
     virtual void LoadChildren(void);
     virtual wxGxObject* AddLayer(const wxString &sName, int nId);
+    virtual wxGxObject* AddLayerGroup(const wxJSONValue &Data, const wxString &sName, int nId);
 protected:
     bool m_bChildrenLoaded;
     wxString m_sProxy;
@@ -269,6 +271,30 @@ protected:
     int m_nDNSCacheTimeout;
     int m_nTimeout;
     int m_nConnTimeout;
+};
+
+/** @class wxGxNGWLayers
+
+    A NextGIS Web Service Layers GxObject.
+
+    @library{ catalog }
+*/
+class WXDLLIMPEXP_GIS_CLT wxGxNGWLayers :
+    public wxGxObjectContainer,
+    public IGxObjectNoFilter
+{
+    DECLARE_CLASS(wxGxNGWLayers)
+public:
+    wxGxNGWLayers(wxGxObject *oParent, const wxString &soName = _("Layers"), const CPLString &soPath = "");
+    virtual ~wxGxNGWLayers(void);
+    //wxGxObject
+    virtual wxString GetCategory(void) const { return wxString(_("NGW service layers")); };
+    //wxGxObjectContainer
+    virtual bool AreChildrenViewable(void) const { return true; };
+    virtual void LoadChildren(const wxJSONValue &Data);
+protected:
+    virtual wxGxObject* AddLayer(const wxString &sName, int nId);
+    virtual wxGxObject* AddLayerGroup(const wxJSONValue &Data, const wxString &sName, int nId);
 };
 
 /** @class wxGxNGWLayer

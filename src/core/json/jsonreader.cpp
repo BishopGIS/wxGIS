@@ -19,8 +19,6 @@
 #include <wx/debug.h>
 #include <wx/log.h>
 
-
-
 /*! \class wxJSONReader
  \brief The JSON parser
 
@@ -1482,8 +1480,8 @@ wxJSONReader::ReadValue( wxInputStream& is, int ch, wxJSONValue& val )
     }
 
     if ( tDouble )    {
-        r = s.ToDouble( &d );
-        wxLogTrace( traceMask, _T("(%s) convert to double result=%d"),
+        r = s.ToCDouble(&d);
+        wxLogTrace(traceMask, _T("(%s) convert to double result=%d"),
                  __PRETTY_FUNCTION__, r );
         if ( r )  {
             // store the value

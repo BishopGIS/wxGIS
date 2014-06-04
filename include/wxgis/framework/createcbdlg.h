@@ -3,11 +3,11 @@
  * Purpose:  create menu or toolbar dialog.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009  Bishop
+*   Copyright (C) 2009,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -36,11 +36,14 @@
 #include <wx/dialog.h>
 #include <wx/checkbox.h>
 
-///////////////////////////////////////////////////////////////////////////
+/** @class wxGISCreateCommandBarDlg
 
-///////////////////////////////////////////////////////////////////////////////
-/// Class wxGISCreateCommandBarDlg
-///////////////////////////////////////////////////////////////////////////////
+    The dialog to create new menues and toolbars
+    
+    @library{framework}
+ */
+
+
 class WXDLLIMPEXP_GIS_FRW wxGISCreateCommandBarDlg : public wxDialog 
 {
 	private:

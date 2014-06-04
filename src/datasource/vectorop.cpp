@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -69,12 +69,17 @@ void SetEnvelopeRatio(OGREnvelope &Env, double dRatio)
 		Env.MinY = dCenterY - dHeight;
 	}
 
+#ifdef _DEBUG
 	dWidth = (Env.MaxX - Env.MinX) / 2;
 	dHeight = (Env.MaxY - Env.MinY) / 2;
 	dCenterX = Env.MinX + dWidth;
 	dCenterY = Env.MinY + dHeight;
 
 	dEnvRatio = dWidth / dHeight;
+
+//    wxASSERT(IsDoubleEquil(dRatio, dEnvRatio));
+#endif //_DEBUG
+
 }
 
 wxGISGeometry EnvelopeToGeometry(const OGREnvelope &Env, const wxGISSpatialReference &SpaRef)

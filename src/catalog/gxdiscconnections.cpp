@@ -3,11 +3,11 @@
  * Purpose:  wxGxDiscConnections class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2010-2013 Bishop
+*   Copyright (C) 2010-2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -41,9 +41,9 @@ wxGxDiscConnections::wxGxDiscConnections(void) : wxGxJSONConnectionStorage()
 
 bool wxGxDiscConnections::Create(wxGxObject *oParent, const wxString &soName, const CPLString &soPath)
 {
-    if( !wxGxObjectContainer::Create(oParent, _("Folder connections"), soPath) )
+    if (!wxGxObjectContainer::Create(oParent, GetName(), soPath))
     {
-        wxLogError(_("wxGxDiscConnections::Create failed. GxObject %s"), wxString(_("Folder connections")).c_str());
+        wxLogError(_("wxGxSpatialReferencesFolder::Create failed. GxObject %s"), GetName().c_str());
         return false;
     }
     //get config path
@@ -141,9 +141,8 @@ void wxGxDiscConnections::CreateConnectionsStorage(void)
 	arr = wxFSVolumeBase::GetVolumes(wxFS_VOL_MOUNTED, wxFS_VOL_REMOVABLE);//| wxFS_VOL_REMOTE
 #elif defined(__UNIX__)
     //linux paths
-    wxStandardPaths stp;
     arr.Add(wxT("/"));
-    arr.Add(stp.GetUserConfigDir());
+    arr.Add(wxStandardPaths::Get().GetUserConfigDir());
 //      arr.Add(stp.GetDataDir());
 #endif
     //create

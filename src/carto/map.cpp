@@ -3,11 +3,11 @@
  * Purpose:  wxGISMap class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009,2011,2013 Bishop
+*   Copyright (C) 2009,2011,2013 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -31,6 +31,7 @@ wxGISMap::wxGISMap(void)
 	m_sMapName = wxString(_("new map"));
     m_pGISDisplay = NULL;
 	m_bFullExtIsInit = false;
+    m_nIdCounter = 0;
 }
 
 wxGISMap::~wxGISMap(void)
@@ -79,7 +80,7 @@ bool wxGISMap::AddLayer(wxGISLayer* pLayer)
     }
 
     pLayer->SetDisplay(m_pGISDisplay);
-
+    pLayer->SetId(m_nIdCounter++);
 	m_paLayers.push_back(pLayer);
 	return true;
 }
@@ -122,15 +123,64 @@ wxGISSpatialReference wxGISMap::GetSpatialReference(void) const
 	return m_SpatialReference;
 }
 
-wxGISLayer* const wxGISMap::GetLayer(size_t nIndex)
+wxGISLayer* const wxGISMap::GetLayerByIndex(size_t nIndex)
 {
 	wxCriticalSectionLocker locker(m_CritSect);
 	if(nIndex >= m_paLayers.size())
         return NULL;
 	return m_paLayers[nIndex];
-};
+}
 
+wxGISLayer* const wxGISMap::GetLayerById(short nId)
+{
+    wxCriticalSectionLocker locker(m_CritSect);
+    for (size_t i = 0; i < m_paLayers.size(); ++i)
+    {
+        if (m_paLayers[i]->GetId() == nId)
+            return m_paLayers[i];
+    }
+    return NULL;
+}
 
+void wxGISMap::ChangeLayerOrder(size_t nOldIndex, size_t nNewIndex)
+{
+    if (nOldIndex == nNewIndex)
+        return;
+    //bool bAddToIndex = nNewIndex > nOldIndex;
+    wxVector<wxGISLayer*>::iterator IT = m_paLayers.begin();
+    std::advance(IT, nOldIndex);
+    //remove layer from array
+    wxGISLayer* pLayer = *IT;// m_paLayers[nOldIndex];
+    m_paLayers.erase(IT);
+
+    //insert layer to new index
+    //if (bAddToIndex)
+    //{
+    //    nNewIndex--;
+    //}
+    IT = m_paLayers.begin();
+    std::advance(IT, nNewIndex);
+    m_paLayers.insert(IT, pLayer);
+
+    //update layer cache id
+    //we assume that no layers share the same cache
+    //TODO: check this issue
+
+    for (size_t i = 0; i < m_paLayers.size(); ++i)
+    {
+        m_paLayers[i]->SetCacheId(i);
+    }
+}
+
+bool wxGISMap::HasLayerType(wxGISEnumDatasetType eType) const
+{
+    for (size_t i = 0; i < m_paLayers.size(); ++i)
+    {
+        if (m_paLayers[i]->GetType() == eType)
+            return true;
+    }
+    return false;
+}
 //The AddLayer method adds a layer to the Map. Use GetLayerCount to get the total number of layers in the map.
 //AddLayer automatically attempts to set the Map's SpatialReference if a coordinate system has not yet been defined for the map.
 
@@ -188,7 +238,7 @@ void wxGISExtentStack::Do(const OGREnvelope &NewEnv)
 void wxGISExtentStack::Redo()
 {
 	m_nPos++;
-	if(m_nPos < m_staEnvelope.size())
+	if(m_nPos > wxNOT_FOUND && m_nPos < m_staEnvelope.size())
 	{
 		OGREnvelope Env = m_staEnvelope[m_nPos];
 		SetExtent(Env);
@@ -198,7 +248,7 @@ void wxGISExtentStack::Redo()
 void wxGISExtentStack::Undo()
 {
 	m_nPos--;
-	if(m_nPos > wxNOT_FOUND)
+    if (m_nPos > wxNOT_FOUND && m_staEnvelope.size() > m_nPos)
 	{
 		OGREnvelope Env = m_staEnvelope[m_nPos];
 		SetExtent(Env);
@@ -227,3 +277,4 @@ OGREnvelope wxGISExtentStack::GetCurrentExtent(void) const
 {
 	return m_CurrentExtent;
 }
+

@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -207,6 +207,12 @@ void wxGxTab::OnSelectionChanged(wxGxSelectionEvent& event)
 					m_bSizerMain->Replace(m_pCurrentWnd, pWnd);
 					pWnd->Show();
 					m_pCurrentWnd = pWnd;
+
+                    wxGxView* pView = dynamic_cast<wxGxView*>(m_pCurrentWnd);
+                    if (pView != NULL)
+                    {
+                        pView->OnShow(true);
+                    }
 				}
 			}
 		}
@@ -241,6 +247,13 @@ void wxGxTab::OnSelectionChanged(wxGxSelectionEvent& event)
 					m_bSizerMain->Replace(m_pCurrentWnd, pWnd);
 					pWnd->Show();
 					m_pCurrentWnd = pWnd;
+
+                    wxGxView* pView = dynamic_cast<wxGxView*>(m_pCurrentWnd);
+                    if (pView != NULL)
+                    {
+                        pView->OnShow(true);
+                    }
+
 				}
 				goto END;
 			}
@@ -270,6 +283,13 @@ void wxGxTab::OnChoice(wxCommandEvent& event)
 
 		this->Layout();
 
+        wxGxView* pView = dynamic_cast<wxGxView*>(m_pCurrentWnd);
+        if (pView != NULL)
+        {
+            pView->OnShow(true);
+        }
+
+
 		wxGxSelectionEvent sel_event(wxGXSELECTION_CHANGED, m_pApp->GetGxSelection(), GetId());
 		if(m_pCurrentWnd)
 			m_pCurrentWnd->ProcessWindowEventLocally(sel_event);
@@ -289,8 +309,17 @@ bool wxGxTab::Show(bool bShow)
 	//	m_pCurrentWnd = m_pNoWnd;
 	//}
 
-    if(bShow)
+    if (bShow)
+    {
         this->Layout();
+
+    }
+    wxGxView* pView = dynamic_cast<wxGxView*>(m_pCurrentWnd);
+    if (pView != NULL)
+    {
+        pView->OnShow(bShow);
+    }
+
 	return wxPanel::Show(bShow);
 }
 

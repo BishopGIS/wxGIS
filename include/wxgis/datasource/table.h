@@ -3,11 +3,11 @@
  * Purpose:  Table class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2010-2013 Bishop
+*   Copyright (C) 2010-2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -24,13 +24,16 @@
 #include "wxgis/datasource/cursor.h"
 #include "wxgis/datasource/filter.h"
 #include "wxgis/datasource/spatialtree.h"
+#include "wxgis/core/pointer.h"
 
 #include <ogrsf_frmts.h>
 
-/** \class wxGISTable table.h
-    \brief A GIS Table class.
+/** @class wxGISTable
 
+    A GIS Table class.
     This class support basic operations on datasource. No spatial data avaliable, but the OGRFeature is main part of this class, so it's posible to get some spatial information (not recommended).
+
+    @library{datasource}
 */
 
 class WXDLLIMPEXP_GIS_DS wxGISTable : 
@@ -46,7 +49,7 @@ public:
     virtual wxString GetName(void) const;
 	virtual void Close(void);
 	//wxGISTable
-	virtual bool Open(int iLayer = 0, int bUpdate = 0, bool bCache = true, ITrackCancel* const pTrackCancel = NULL);
+	virtual bool Open(int iLayer = 0, int bUpdate = TRUE, bool bCache = true, ITrackCancel* const pTrackCancel = NULL);
     virtual size_t GetSubsetsCount(void) const;
     virtual wxGISDataset* GetSubset(size_t nIndex);
     virtual wxGISDataset* GetSubset(const wxString & sSubsetName);    
@@ -55,7 +58,7 @@ public:
 	virtual void Cache(ITrackCancel* const pTrackCancel = NULL);
     //rowop
 	virtual size_t GetFeatureCount(bool bForce = false, ITrackCancel* const pTrackCancel = NULL);	
-	virtual bool CanDeleteFeature(void);
+    virtual bool CanDeleteFeature(void) const;
 	virtual OGRErr DeleteFeature(long nFID);    
     virtual OGRErr StoreFeature(wxGISFeature &Feature);
 	virtual wxGISFeature CreateFeature(void);
@@ -63,6 +66,9 @@ public:
     virtual OGRErr CommitTransaction(void);
     virtual OGRErr StartTransaction(void);
     virtual OGRErr RollbackTransaction(void);
+    //colop
+	virtual bool CanDeleteField(void) const;
+    virtual OGRErr DeleteField(int nIndex);
     //
     virtual void Reset(void);
     virtual wxGISFeature Next(void);
@@ -73,6 +79,7 @@ public:
     virtual wxFontEncoding GetEncoding(void) const;
     virtual void SetEncoding(const wxFontEncoding &oEncoding);
     virtual bool HasFID(void) const {return m_bHasFID;};
+    virtual bool HasFilter(void) const { return m_bHasFilter; };
     virtual wxArrayString GetFieldNames(void) const;
     virtual wxString GetFieldName(int nIndex) const;
     //
@@ -91,19 +98,23 @@ protected:
 	OGRLayer* m_poLayer;
 
     wxFontEncoding m_Encoding;
-    
+    bool m_bRecodeToSystem;
+
     long m_nFeatureCount, m_nCurrentFID;
     bool m_bOLCStringsAsUTF8;
     bool m_bOLCFastFeatureCount;
     bool m_bHasFID;
+    bool m_bHasFilter;
 };
 
 //#define MAXSTRINGSTORE 1000000
 
-/** \class wxGISTableCached table.h
-    \brief A GIS cached Table class.
-
+/** @class wxGISTableCached
+    
+    A GIS cached Table class.
     The table with caching rows for future fast fetch.
+
+    @library{datasource}
 */
 
 class WXDLLIMPEXP_GIS_DS wxGISTableCached : 
@@ -149,4 +160,5 @@ public:
     wxGISTableQuery(const CPLString &sPath, int nSubType, OGRLayer* poLayer = NULL, OGRDataSource* poDS = NULL);
     virtual ~wxGISTableQuery(void);
     virtual void Cache(ITrackCancel* const pTrackCancel = NULL);
+	virtual size_t GetFeatureCount(bool bForce = false, ITrackCancel* const pTrackCancel = NULL);	
 };

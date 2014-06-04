@@ -7,7 +7,7 @@
 # *
 # *    This program is free software: you can redistribute it and/or modify
 # *    it under the terms of the GNU General Public License as published by
-# *    the Free Software Foundation, either version 3 of the License, or
+# *    the Free Software Foundation, either version 2 of the License, or
 # *    (at your option) any later version.
 # *
 # *    This program is distributed in the hope that it will be useful,
@@ -67,6 +67,7 @@ set(PROJECT_HHEADERS ${PROJECT_HHEADERS}
     ${LIB_HEADERS}/stretch.h
     ${LIB_HEADERS}/transformthreads.h    
     ${LIB_HEADERS}/mxevent.h   
+    ${LIB_HEADERS}/drawinglayer.h
 )
 
 set(PROJECT_CSOURCES ${PROJECT_CSOURCES}
@@ -80,6 +81,7 @@ set(PROJECT_CSOURCES ${PROJECT_CSOURCES}
     ${LIB_SOURCES}/stretch.cpp
     ${LIB_SOURCES}/transformthreads.cpp    
     ${LIB_SOURCES}/mxevent.cpp
+    ${LIB_SOURCES}/drawinglayer.cpp
 )
 
 add_definitions(-DWXMAKINGDLL_GIS_CRT)

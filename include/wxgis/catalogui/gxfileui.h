@@ -3,11 +3,11 @@
  * Purpose:  wxGxFileUI classes.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2010-2011 Bishop
+*   Copyright (C) 2010-2011,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -23,8 +23,11 @@
 #include "wxgis/catalogui/catalogui.h"
 #include "wxgis/catalog/gxfile.h"
 
-/** \class wxGxFile gxfileui.h
-    \brief A file GxObject.
+/** @class wxGxFile
+
+    A file GxObject.
+
+    @library{catalogui}
 */
 
 class WXDLLIMPEXP_GIS_CLU wxGxFileUI :
@@ -38,8 +41,11 @@ public:
 	virtual ~wxGxFileUI(void);
 };
 
-/** \class wxGxPrjFileUI gxfileui.h
-    \brief A proj file GxObject.
+/** @class wxGxPrjFileUI
+
+    A proj file GxObject.
+
+    @library{catalogui}
 */
 
 class WXDLLIMPEXP_GIS_CLU wxGxPrjFileUI :
@@ -66,8 +72,11 @@ protected:
     wxIcon m_oSmallIcon;
 };
 
-/** \class wxGxTextFileUI gxfileui.h
-    \brief A text file GxObject.
+/** @class wxGxTextFileUI
+
+    A text file GxObject.
+
+    @library{catalogui}
 */
 
 class WXDLLIMPEXP_GIS_CLU wxGxTextFileUI :

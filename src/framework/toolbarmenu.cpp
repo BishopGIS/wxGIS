@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -68,7 +68,7 @@ void wxGISToolBarMenu::Update(void)
 	wxGISCommand* pCmd = m_pApp->GetCommand(wxT("wxGISCommonCmd"), 2);
     if (NULL != pCmd)
     {
-		m_delitems.push_back(Append(pCmd->GetID(), pCmd->GetCaption(), pCmd->GetTooltip(), (wxItemKind)pCmd->GetKind()));
+		m_delitems.push_back(Append(pCmd->GetId(), pCmd->GetCaption(), pCmd->GetTooltip(), (wxItemKind)pCmd->GetKind()));
     }
 }
 

@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -56,9 +56,13 @@ wxGISApplicationBase::~wxGISApplicationBase()
 
 wxGISCommand* wxGISApplicationBase::GetCommand(long CmdID) const
 {
-	for(size_t i = 0; i < m_CommandArray.size(); ++i)
-		if(m_CommandArray[i] && m_CommandArray[i]->GetID() == CmdID)
+    for (size_t i = 0; i < m_CommandArray.size(); ++i)
+    {
+        if (m_CommandArray[i] && m_CommandArray[i]->GetId() == CmdID)
+        {
 			return m_CommandArray[i];
+        }
+    }
 	return NULL;
 }
 
@@ -213,7 +217,7 @@ void wxGISApplicationBase::LoadCommands(wxXmlNode* pRootNode)
 					wxGISCommand *pNewCmd = dynamic_cast<wxGISCommand*>(newobj);//wxDynamicCast(newobj, wxGISCommand);//
 					if(pNewCmd && pNewCmd->OnCreate(this))
 					{
-						pNewCmd->SetID(ID_PLUGINCMD + nCmdCounter);
+						pNewCmd->SetId(ID_PLUGINCMD + nCmdCounter);
 						pNewCmd->SetSubType(i);
 						//TODO: check doubles
                         m_CommandArray.Add(pNewCmd);
@@ -260,11 +264,11 @@ void wxGISApplicationBase::LoadMenues(wxXmlNode* pRootNode)
 
 void wxGISApplicationBase::Command(wxGISCommand* pCmd)
 {
-    if(!pCmd)
+    if(NULL == pCmd)
         return;
-	ITool* pTool(NULL);
-	if(pCmd->GetKind() == enumGISCommandCheck && (pTool = dynamic_cast<ITool*>(pCmd)) != NULL)
-	{
+    ITool* pTool = dynamic_cast<ITool*>(pCmd);
+    if (pCmd->GetKind() != enumGISCommandNormal && pTool != NULL)
+    {
 		//uncheck
 		if(m_CurrentTool)
 			m_CurrentTool->SetChecked(false);
@@ -272,8 +276,10 @@ void wxGISApplicationBase::Command(wxGISCommand* pCmd)
 		pTool->SetChecked(true);
 		m_CurrentTool = pTool;
 	}
-	else
+    else
+    {
 		pCmd->OnClick();
+    }
 }
 
 bool wxGISApplicationBase::CreateApp(void)

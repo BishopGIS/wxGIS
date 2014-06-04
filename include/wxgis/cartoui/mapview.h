@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -26,8 +26,11 @@
 #include "wxgis/cartoui/mxeventui.h"
 #include "wxgis/carto/mxevent.h"
 
-/** \class wxGISMapView mapview.h
-    \brief The MapView class draw layers to wxWindow.
+/** @class wxGISMapView
+
+    The MapView class draw layers to wxWindow.
+
+    @library{cartoui}
 */
 
 class WXDLLIMPEXP_GIS_CTU wxGISMapView :
@@ -47,7 +50,7 @@ public:
 	virtual ~wxGISMapView(void);
     virtual bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL | wxCLIP_CHILDREN | wxNO_FULL_REPAINT_ON_RESIZE, const wxString& name = wxT("GISMapView"));//wxSTATIC_BORDER|
 	virtual void SetTrackCancel(ITrackCancel* pTrackCancel);
-	virtual wxGISDisplay* GetDisplay(void){return m_pGISDisplay;};
+	virtual wxGISDisplay* GetDisplay(void) const {return m_pGISDisplay;};
 	//wxGISExtentStack
 	virtual bool AddLayer(wxGISLayer* pLayer);
 	virtual void Clear(void);
@@ -55,7 +58,7 @@ public:
 	virtual void SetExtent(const OGREnvelope& Env);
 	virtual void SetFullExtent(void);
 	virtual OGREnvelope GetFullExtent(void);
-	//
+    //
 	virtual double GetScaleRatio(OGREnvelope& Bounds, wxDC& dc);
 	virtual void PanStart(wxPoint MouseLocation);
 	virtual void PanMoveTo(wxPoint MouseLocation);
@@ -70,9 +73,9 @@ public:
     virtual void AddFlashGeometry(const wxGISGeometry& Geometry, wxGISSymbol* const pSymbol, unsigned char nPhase = 1);
     virtual void StartFlashing(wxGISEnumFlashStyle eFlashStyle = enumGISMapFlashNewColor);
 
-    /** \struct _flash_geometry mapview.h
-        \brief The geometry needed to be flashed on map.
-
+    /** @struct _flash_geometry
+        
+        The geometry needed to be flashed on map.
         stFillColour and stLineColour set drawing style and phase used in multistep flashing
     */
 

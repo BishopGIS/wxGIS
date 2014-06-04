@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -135,6 +135,14 @@ wxJSONValue wxNetMessage::GetInternalValue() const
     return ((wxNetMessageRefData *)m_refData)->m_Val;
 }
 
+wxNetMessage wxNetMessage::Clone() const
+{
+    wxJSONValue clonned_internal_value = GetInternalValue();
+    clonned_internal_value.UnShare();
+    wxNetMessage clonned(clonned_internal_value);
+    return clonned;
+}
+
 //-----------------------------------------------------------------------------
 // wxNetMessageRefData
 //-----------------------------------------------------------------------------
@@ -151,11 +159,11 @@ wxNetMessageRefData::wxNetMessageRefData( const wxNetMessageRefData& data ) : wx
 
 wxNetMessageRefData::wxNetMessageRefData( const wxJSONValue& val ) : wxObjectRefData()
 {
-    m_nPriority = val.Get(wxT("prio"), wxJSONValue(enumGISPriorityNormal)).AsInt();
-    m_nCmd = (wxGISNetCommand)val.Get(wxT("cmd"), wxJSONValue(enumGISNetCmdUnk)).AsInt();
-    m_nState = (wxGISNetCommandState)val.Get(wxT("st"), wxJSONValue(enumGISNetCmdStUnk)).AsInt();
-    m_nId = val.Get(wxT("id"), wxJSONValue(wxNOT_FOUND)).AsLong();
-    m_sMessage = val[wxT("msg")].AsString();
+    m_nPriority = val.Get(wxT("prio"), enumGISPriorityNormal).AsInt();
+    m_nCmd = (wxGISNetCommand)val.Get(wxT("cmd"), enumGISNetCmdUnk).AsInt();
+    m_nState = (wxGISNetCommandState)val.Get(wxT("st"), enumGISNetCmdStUnk).AsInt();
+    m_nId = val.Get(wxT("id"), wxNOT_FOUND).AsLong();
+    m_sMessage = val.Get(wxT("msg"), wxEmptyString).AsString();
     m_Val = val;
 
     //m_Val[wxT("ver")] = WXNETVER;

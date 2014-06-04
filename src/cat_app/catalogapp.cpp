@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -59,10 +59,17 @@ bool wxGISCatalogApp::OnInit()
     // call the base class initialization method, currently it only parses a
     // few common command-line options but it could be do more in the future
     if ( !wxApp::OnInit() )
-        return false;
-    wxGISAppConfig oConfig = GetConfig();
-	if(!oConfig.IsOk())
+    {
+        wxLogError(_("Application initialization failed"));
 		return false;
+    }
+
+    wxGISAppConfig oConfig = GetConfig();
+    if (!oConfig.IsOk())
+    {
+        wxLogError(_("No valid configuration exist"));
+		return false;
+    }
 
     //create application/main frame
     m_pMainFrame = new wxGISCatalogFrame(NULL, wxID_ANY, wxString(_("wxGIS Catalog")), wxDefaultPosition, wxSize(800, 480) );
@@ -82,23 +89,36 @@ bool wxGISCatalogApp::OnInit()
 
 	//setup loging
 	wxString sLogDir = oConfig.GetLogDir();
-    if(!m_pMainFrame->SetupLog(sLogDir))
+    if (!m_pMainFrame->SetupLog(sLogDir))
+    {
+        wxLogError(_("The log directory '%s' is not valid"), sLogDir.c_str());
         return false;
+    }
+    oConfig.ReportPaths();
 
 	//setup locale
 	wxString sLocale = oConfig.GetLocale();
 	wxString sLocaleDir = oConfig.GetLocaleDir();
-    if(!m_pMainFrame->SetupLoc(sLocale, sLocaleDir))
+    if (!m_pMainFrame->SetupLoc(sLocale, sLocaleDir))
+    {
+        wxLogError(_("Setup locale failed. Locale files directory '%s', locale: %s"), sLocaleDir.c_str(), sLocale.c_str());
         return false;
+    }
 
    	//setup sys
     wxString sSysDir = oConfig.GetSysDir();
-    if(!m_pMainFrame->SetupSys(sSysDir))
+    if (!m_pMainFrame->SetupSys(sSysDir))
+    {
+        wxLogError(_("System directory '%s' is not valid"), sSysDir.c_str());
         return false;
+    }
 
    	//setup debug
 	bool bDebugMode = oConfig.GetDebugMode();
     m_pMainFrame->SetDebugMode(bDebugMode);
+
+    //disable loading drivers on GDAL_DRIVER_PATH env value
+    CPLSetConfigOption("GDAL_DRIVER_PATH", "disabled");
 
 	OGRRegisterAll();
 	GDALAllRegister();

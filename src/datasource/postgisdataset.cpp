@@ -3,11 +3,11 @@
  * Purpose:  PosGISDataset class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2010-2013 Bishop
+*   Copyright (C) 2010-2014 Bishop
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -86,13 +86,15 @@ wxGISPostgresDataSource::~wxGISPostgresDataSource(void)
 
 void wxGISPostgresDataSource::Close(void)
 {
+    wxCriticalSectionLocker locker(m_CritSect);
+
 	m_bIsOpened = false;
-    if(m_poDS && m_poDS->Dereference() <= 0)
-        OGRDataSource::DestroyDataSource( m_poDS );
-	m_poDS = NULL;
     if (m_poDS4SQL && m_poDS4SQL->Dereference() <= 0)
         OGRDataSource::DestroyDataSource(m_poDS4SQL);
     m_poDS4SQL = NULL;
+    if(m_poDS && m_poDS->Dereference() <= 0)
+        OGRDataSource::DestroyDataSource( m_poDS );
+	m_poDS = NULL;
     
 }
 
@@ -108,7 +110,7 @@ wxGISDataset* wxGISPostgresDataSource::GetSubset(size_t nIndex)
     if(m_poDS)
     {
 	    OGRLayer* poLayer = m_poDS->GetLayer(nIndex);
-		return GetDatasetFromOGRLayer(nIndex, m_sPath, poLayer);
+        return GetDatasetFromOGRLayer(m_sPath, poLayer);
     }
     return NULL;
 }
@@ -119,41 +121,40 @@ wxGISDataset* wxGISPostgresDataSource::GetSubset(const wxString &sTableName)
     {
         CPLString sCmpName;
         wxString woPublicStr;
-        if (sTableName.StartsWith(wxT("public."), &woPublicStr))
+        if (!sTableName.StartsWith(wxT("public."), &woPublicStr))
         {
-            sCmpName = CPLString(woPublicStr.mb_str(wxConvUTF8));
+            woPublicStr = sTableName;
         }
-        else
-        {
-            sCmpName = CPLString(sTableName.mb_str(wxConvUTF8));
-        }
-        for (int i = 0; i < m_poDS->GetLayerCount(); ++i)
-        {
-            OGRLayer* poLayer = m_poDS->GetLayer(i);
-            if (NULL != poLayer && wxGISEQUAL(sCmpName, poLayer->GetName()))
-            {
-                return GetDatasetFromOGRLayer(i, m_sPath, poLayer);
-            }
-        }
+        woPublicStr.Replace(wxT("\""), wxT(""));
+        sCmpName = CPLString(woPublicStr.ToUTF8());
+        //for (int i = 0; i < m_poDS->GetLayerCount(); ++i)
+        //{
+        //    OGRLayer* poLayer = m_poDS->GetLayer(i);
+        //    if (NULL != poLayer && wxGISEQUAL(sCmpName, poLayer->GetName()))
+        //    {
+        //        return GetDatasetFromOGRLayer(i, m_sPath, poLayer);
+        //    }
+        //}
 
         //try to OpenTable
         OGRLayer* poLayer = m_poDS->GetLayerByName(sCmpName);
-        if (NULL != poLayer)
-        {
-            for (int i = 0; i < m_poDS->GetLayerCount(); ++i)
-            {
-                OGRLayer* poLayer = m_poDS->GetLayer(i);
-                if (NULL != poLayer && wxGISEQUAL(sCmpName, poLayer->GetName()))
-                {
-                    return GetDatasetFromOGRLayer(i, m_sPath, poLayer);
-                }
-            }
-        }
+        return GetDatasetFromOGRLayer(m_sPath, poLayer);
+        //if (NULL != poLayer)
+        //{
+        //    for (int i = 0; i < m_poDS->GetLayerCount(); ++i)
+        //    {
+        //        poLayer = m_poDS->GetLayer(i);
+        //        if (NULL != poLayer && wxGISEQUAL(sCmpName, poLayer->GetName()))
+        //        {
+        //            return GetDatasetFromOGRLayer(i, m_sPath, poLayer);
+        //        }
+        //    }
+        //}
     }
     return NULL;
 }
 
-wxGISDataset* wxGISPostgresDataSource::GetDatasetFromOGRLayer(int iLayer, const CPLString &sPath, OGRLayer* poLayer)
+wxGISDataset* wxGISPostgresDataSource::GetDatasetFromOGRLayer(const CPLString &sPath, OGRLayer* poLayer)
 {
 	wxCHECK_MSG(poLayer, NULL, wxT("Input layer pointer is null"));
 	//check the layer type
@@ -161,7 +162,7 @@ wxGISDataset* wxGISPostgresDataSource::GetDatasetFromOGRLayer(int iLayer, const 
     CPLString szGeomColumn(poLayer->GetGeometryColumn());
 	if(!szGeomColumn.empty())
 	{
-        wxGISPostgresFeatureDataset* pFeatureDataset = new wxGISPostgresFeatureDataset(iLayer, sPath, poLayer, m_poDS);
+        wxGISPostgresFeatureDataset* pFeatureDataset = new wxGISPostgresFeatureDataset(sPath, poLayer, m_poDS);
 		pFeatureDataset->SetEncoding(m_Encoding);
         pDataset = static_cast<wxGISDataset*>(pFeatureDataset);
 	}
@@ -180,54 +181,14 @@ wxString wxGISPostgresDataSource::GetName(void) const
     return m_sDBName;
 }
 
-//wxGISDataset* wxGISPostgresDataSource::PGExecuteSQL( const wxString &sStatement, bool bMultipleCommandAllowed )
-//{
-//    OGRPGDataSource* pDS = dynamic_cast<OGRPGDataSource*>(m_poDS);
-//    if(!pDS)
-//        return NULL;
-//
-//    CPLErrorReset();
-//    PGconn* hPGConn = pDS->GetPGConn();
-//
-//    PGresult    *hResult;        
-//
-//    wxString sCursorName = wxString::Format(wxT("cur_%d"), wxNewId());
-//    wxString sFullSQLCommand = wxString::Format(wxT("DECLARE %s CURSOR FOR %s"), sCursorName.c_str(), sStatement.c_str());
-//
-//    hResult =  OGRPG_PQexec( hPGConn, sFullSQLCommand.mb_str(wxConvUTF8), bMultipleCommandAllowed );
-//    if(hResult && PQresultStatus(hResult) == PGRES_COMMAND_OK)
-//    {
-//        OGRPGClearResult( hResult );
-//
-//        sFullSQLCommand = wxString::Format(wxT("FETCH 0 in %s"), sCursorName.c_str() );
-//        CPLString szFullSQLCommand(sFullSQLCommand.mb_str(wxConvUTF8));
-//        hResult = OGRPG_PQexec(hPGConn, szFullSQLCommand );
-//
-//        OGRPGResultLayer *poLayer = new OGRPGResultLayer( pDS, szFullSQLCommand, hResult );
-//        
-//        OGRPGClearResult( hResult );
-//
-//        m_poDS->Reference();
-//        wxGISTable* pTable = new wxGISTable(szFullSQLCommand, enumTableQueryResult, poLayer, m_poDS);
-//		pTable->SetEncoding(m_Encoding);
-//        return wxStaticCast(pTable, wxGISDataset);
-//    }
-//
-//    CPLError( CE_Failure, CPLE_AppDefined, "%s", PQerrorMessage( hPGConn ) );
-//    wxLogError(wxT("wxGISPostgresDataSource: %s"), PQerrorMessage( hPGConn ));
-//     
-//    OGRPGClearResult( hResult );
-//    return NULL;
-//}
-
 bool wxGISPostgresDataSource::CreateSchema(const wxString &sSchemaName)
 {
-    return PGExecuteSQL(wxString::Format(wxT("CREATE SCHEMA \"%s\";"), sSchemaName.c_str()));
+    return ExecuteSQL(wxString::Format(wxT("CREATE SCHEMA \"%s\";"), sSchemaName.c_str()));
 }
 
 bool wxGISPostgresDataSource::DeleteSchema(const wxString &sSchemaName)
 {
-    return PGExecuteSQL(wxString::Format(wxT("DROP SCHEMA \"%s\" CASCADE;"), sSchemaName.c_str()));
+    return ExecuteSQL(wxString::Format(wxT("DROP SCHEMA \"%s\" CASCADE;"), sSchemaName.c_str()));
 }
 
 bool wxGISPostgresDataSource::RenameSchema(const wxString &sSchemaName, const wxString &sSchemaNewName)
@@ -236,7 +197,7 @@ bool wxGISPostgresDataSource::RenameSchema(const wxString &sSchemaName, const wx
     {
         return true;
     }
-    return PGExecuteSQL(wxString::Format(wxT("ALTER SCHEMA \"%s\" RENAME TO \"%s\";"), sSchemaName.c_str(), sSchemaNewName.c_str()));
+    return ExecuteSQL(wxString::Format(wxT("ALTER SCHEMA \"%s\" RENAME TO \"%s\";"), sSchemaName.c_str(), sSchemaNewName.c_str()));
 }
 
 bool wxGISPostgresDataSource::RenameTable(const wxString &sSchemaName, const wxString &sTableName, const wxString &sTableNewName)
@@ -245,12 +206,41 @@ bool wxGISPostgresDataSource::RenameTable(const wxString &sSchemaName, const wxS
     {
         return true;
     }
+    wxCriticalSectionLocker locker(m_CritSect);
     wxString sResultName = wxGISPostgresDataSource::NormalizeTableName(sTableNewName);
-    bool bRes = PGExecuteSQL(wxString::Format(wxT("ALTER TABLE %s.\"%s\" RENAME TO \"%s\";"), sSchemaName.c_str(), sTableName.c_str(), sResultName.c_str()));
-    //try to rename index. Assume that the index created by gdal and geometry field name was not changed from wkb_geometry
+    wxString sSQL = wxString::Format(wxT("ALTER TABLE \"%s\".\"%s\" RENAME TO \"%s\";"), sSchemaName.c_str(), sTableName.c_str(), sResultName.c_str());
+    sSQL.Append(wxString::Format(wxT("ALTER INDEX \"%s\".\"%s_wkb_geometry_geom_idx\" RENAME TO \"%s_wkb_geometry_geom_idx\";"), sSchemaName.c_str(), sTableName.c_str(), sResultName.c_str()));
+    sSQL.Append(wxString::Format(wxT("ALTER INDEX \"%s\".\"%s_pkey\" RENAME TO \"%s_pkey\";"), sSchemaName.c_str(), sTableName.c_str(), sResultName.c_str()));
+    CPLErrorReset();
+    m_poDS->ExecuteSQL(sSQL.ToUTF8(), NULL, NULL);
+    if (CPLGetLastErrorNo() != CE_None)
+    {
+        CPLError(CE_Failure, CPLE_AppDefined, CPLGetLastErrorMsg());
+        wxLogError(wxT("wxGISPostgresDataSource: %s"), wxString(CPLGetLastErrorMsg(), wxCSConv(m_Encoding)));
+
+        return false;
+    }
+    //sSQL = wxString::Format(wxT("ALTER INDEX \"%s\".\"%s_wkb_geometry_geom_idx\" RENAME TO \"%s_wkb_geometry_geom_idx\";"), sSchemaName.c_str(), sTableName.c_str(), sResultName.c_str());
+    //m_poDS->ExecuteSQL(sSQL.ToUTF8(), NULL, NULL);
+    //if (CPLGetLastErrorNo() != CE_None)
+    //{
+    //    CPLError(CE_Failure, CPLE_AppDefined, CPLGetLastErrorMsg());
+    //    wxLogError(wxT("wxGISPostgresDataSource: %s"), wxString(CPLGetLastErrorMsg(), wxCSConv(m_Encoding)));
+
+    //    return false;
+    //}
+
+    //sSQL = wxString::Format(wxT("ALTER INDEX \"%s\".\"%s_pkey\" RENAME TO \"%s_pkey\";"), sSchemaName.c_str(), sTableName.c_str(), sResultName.c_str());
+    //m_poDS->ExecuteSQL(sSQL.ToUTF8(), NULL, NULL);
+    //if (CPLGetLastErrorNo() != CE_None)
+    //{
+    //    CPLError(CE_Failure, CPLE_AppDefined, CPLGetLastErrorMsg());
+    //    wxLogError(wxT("wxGISPostgresDataSource: %s"), wxString(CPLGetLastErrorMsg(), wxCSConv(m_Encoding)));
+
+    //    return false;
+    //}
+    return true;
     //TODO: find index and rename it to gdal look like
-    PGExecuteSQL(wxString::Format(wxT("ALTER INDEX %s.\"%s_wkb_geometry_geom_idx\" RENAME TO \"%s_wkb_geometry_geom_idx\";"), sSchemaName.c_str(), sTableName.c_str(), sResultName.c_str()));
-    return bRes;
 }
 
 bool wxGISPostgresDataSource::MoveTable(const wxString &sTableName, const wxString &sSchemaName, const wxString &sSchemaNewName)
@@ -258,41 +248,111 @@ bool wxGISPostgresDataSource::MoveTable(const wxString &sTableName, const wxStri
     return false;
 }
 
-bool wxGISPostgresDataSource::PGExecuteSQL(const wxString &sStatement)
+bool wxGISPostgresDataSource::CreateDatabase(const wxString &sDBName, const wxString &sTemplate, const wxString &sOwner, const wxString &sEncoding)
 {
-	wxCriticalSectionLocker locker(m_CritSect);
-    OGRPGDataSource* pDS = dynamic_cast<OGRPGDataSource*>(m_poDS4SQL);
-    if(!pDS)
-        return false;
-
-    CPLErrorReset();
-    PGconn* hPGConn = pDS->GetPGConn();
-
-    PGresult    *hResult = OGRPG_PQexec( hPGConn, sStatement.mb_str(wxConvUTF8), TRUE );
-    ExecStatusType status = PQresultStatus(hResult);
-    if (status == PGRES_COMMAND_OK)
+    if (sTemplate.IsEmpty())
     {
-        OGRPGClearResult( hResult );
-        return true;
+        wxString sCreateDb = wxString::Format(wxT("CREATE DATABASE %s WITH OWNER = %s ENCODING = '%s' TABLESPACE = pg_default;"), sDBName.c_str(), sOwner.c_str(), sEncoding.c_str(), sTemplate.c_str() );
+        //TODO: SET EXTENSION
+        OGRPGDataSource *pPGDS = (OGRPGDataSource*)(m_poDS);//dynamic_cast<OGRPGDataSource*>(m_poDS);
+        if (pPGDS != NULL)
+        {
+            PGresult* hResult = PQexec(pPGDS->GetPGConn(), sCreateDb.mb_str());
+            if (hResult)
+            {
+                bool bRes = PQresultStatus(hResult) == PGRES_COMMAND_OK;
+                PQclear(hResult);
+                if (!bRes)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+            else
+            {
+                CPLError(CE_Failure, CPLE_AppDefined, "PGresult is null");
+            }
+            //reconnect to new db
+            //execute extenstion ...
+        }
+        else
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Dynamic cast to OGRPGDataSource failed");
+        }    
     }
-    if( status == PGRES_NONFATAL_ERROR || status == PGRES_FATAL_ERROR )
+    else
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "%s", PQerrorMessage( hPGConn ) );
-        wxLogError(wxT("wxGISPostgresDataSource: %s"), wxString(PQerrorMessage(hPGConn), wxCSConv(m_Encoding)));
+        wxString sCreateDb = wxString::Format(wxT("CREATE DATABASE %s WITH OWNER = %s ENCODING = '%s' TEMPLATE=%s TABLESPACE = pg_default;"), sDBName.c_str(), sOwner.c_str(), sEncoding.c_str(), sTemplate.c_str() );
+        OGRPGDataSource *pPGDS = (OGRPGDataSource*)(m_poDS);//dynamic_cast<OGRPGDataSource*>(m_poDS);
+        if (pPGDS != NULL)
+        {
+            PGresult* hResult = PQexec(pPGDS->GetPGConn(), sCreateDb.mb_str());
+            if (hResult)
+            {
+                bool bRes = PQresultStatus(hResult) == PGRES_COMMAND_OK;
+                if (!bRes)
+                {
+                    CPLError(CE_Failure, CPLE_AppDefined, "%s", PQerrorMessage(pPGDS->GetPGConn()));
+                }
+                PQclear(hResult);
+                return bRes;
+            }
+            else
+            {
+                CPLError(CE_Failure, CPLE_AppDefined, "PGresult is null");
+            }
+        }
+        else
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Dynamic cast to OGRPGDataSource failed");
+        }
     }
 
-    OGRPGClearResult( hResult );
     return false;
 }
 
-wxGISDataset* wxGISPostgresDataSource::ExecuteSQL(const wxString &sStatement, const wxString &sDialect)
+bool wxGISPostgresDataSource::ExecuteSQL(const wxString &sStatement)
+{
+    wxCriticalSectionLocker locker(m_CritSect);
+    CPLErrorReset();
+    if (NULL == m_poDS)
+        return false;
+
+    try
+    {
+        m_poDS->ExecuteSQL(sStatement.ToUTF8(), NULL, NULL);
+    }
+    catch (...)
+    {
+        CPLError(CE_Failure, CPLE_AppDefined, "Unexpected error");
+        wxLogError(wxT("wxGISPostgresDataSource: Unexpected error"));
+
+        return false;
+    }
+    
+    if (CPLGetLastErrorNo() != CE_None)
+    {
+        CPLError(CE_Failure, CPLE_AppDefined, CPLGetLastErrorMsg());
+        wxLogError(wxT("wxGISPostgresDataSource: %s"), wxString(CPLGetLastErrorMsg(), wxCSConv(m_Encoding)));
+
+        return false;
+    }
+    return true;
+
+}
+
+wxGISDataset* wxGISPostgresDataSource::ExecuteSQL2(const wxString &sStatement, const wxString &sDialect)
 {
 	wxCriticalSectionLocker locker(m_CritSect);
 	wxGISDataset* pDataset(NULL);
-    if (m_poDS4SQL)
+    if (NULL != m_poDS4SQL)
 	{
         CPLString szStatement(sStatement.mb_str(wxConvUTF8));
-        OGRLayer * poLayer = m_poDS4SQL->ExecuteSQL(szStatement, NULL, sDialect.mb_str(wxConvUTF8));
+        const char* szDialect = NULL;
+        if (!sDialect.IsEmpty())
+            szDialect = sDialect.mb_str(wxConvUTF8);
+        OGRLayer * poLayer = m_poDS4SQL->ExecuteSQL(szStatement, NULL, szDialect);
 		if(	poLayer )
 		{
             poLayer->ResetReading();
@@ -310,7 +370,7 @@ wxGISDataset* wxGISPostgresDataSource::ExecuteSQL(const wxString &sStatement, co
 	wsGET(pDataset);
 }
 
-wxGISDataset* wxGISPostgresDataSource::ExecuteSQL(const wxGISSpatialFilter &SpatialFilter, const wxString &sDialect)
+wxGISDataset* wxGISPostgresDataSource::ExecuteSQL2(const wxGISSpatialFilter &SpatialFilter, const wxString &sDialect)
 {
 	wxCriticalSectionLocker locker(m_CritSect);
 	wxGISDataset* pDataset(NULL);
@@ -380,62 +440,6 @@ bool wxGISPostgresDataSource::Open(int bUpdate)
 	return true;
 }
 
-
-PGresult *wxGISPostgresDataSource::OGRPG_PQexec(PGconn *conn, const char *query, int bMultipleCommandAllowed)
-{
-    PGresult* hResult;
-#if defined(PG_PRE74)
-    /* PQexecParams introduced in PG >= 7.4 */
-    hResult = PQexec(conn, query);
-#else
-    if (bMultipleCommandAllowed)
-        hResult = PQexec(conn, query);
-    else
-        hResult = PQexecParams(conn, query, 0, NULL, NULL, NULL, NULL, 0);
-#endif
-
-#ifdef _DEBUG
-    const char* pszRetCode = "UNKNOWN";
-    char szNTuples[32];
-    szNTuples[0] = '\0';
-    if (hResult)
-    {
-        switch(PQresultStatus(hResult))
-        {
-            case PGRES_TUPLES_OK:
-                pszRetCode = "PGRES_TUPLES_OK";
-                sprintf(szNTuples, ", ntuples = %d", PQntuples(hResult));
-                break;
-            case PGRES_COMMAND_OK:
-                pszRetCode = "PGRES_COMMAND_OK";
-                break;
-            case PGRES_NONFATAL_ERROR:
-                pszRetCode = "PGRES_NONFATAL_ERROR";
-                break;
-            case PGRES_FATAL_ERROR:
-                pszRetCode = "PGRES_FATAL_ERROR";
-                break;
-            default: break;
-        }
-    }
-    if (bMultipleCommandAllowed)
-        CPLDebug("PG", "PQexec(%s) = %s%s", query, pszRetCode, szNTuples);
-    else
-        CPLDebug("PG", "PQexecParams(%s) = %s%s", query, pszRetCode, szNTuples);
-
-/* -------------------------------------------------------------------- */
-/*      Generate an error report if an error occured.                   */
-/* -------------------------------------------------------------------- */
-    if ( !hResult || (PQresultStatus(hResult) == PGRES_NONFATAL_ERROR ||
-                      PQresultStatus(hResult) == PGRES_FATAL_ERROR ) )
-    {
-        CPLDebug( "PG", "%s", PQerrorMessage( conn ) );
-    }
-#endif
-
-    return hResult;
-}
-
 bool wxGISPostgresDataSource::Rename(const wxString &sNewName)
 {
     if(m_bPathPresent)
@@ -495,9 +499,8 @@ wxString wxGISPostgresDataSource::NormalizeTableName(const wxString &sSrcName)
 
 IMPLEMENT_CLASS(wxGISPostgresFeatureDataset, wxGISFeatureDataset)
 
-wxGISPostgresFeatureDataset::wxGISPostgresFeatureDataset(int iLayer, const CPLString &sPath, OGRLayer* poLayer, OGRDataSource* poDS) : wxGISFeatureDataset(sPath, enumVecPostGIS, poLayer, poDS)
+wxGISPostgresFeatureDataset::wxGISPostgresFeatureDataset(const CPLString &sPath, OGRLayer* poLayer, OGRDataSource* poDS) : wxGISFeatureDataset(sPath, enumVecPostGIS, poLayer, poDS)
 {
-    m_iLayer = iLayer;
     m_nType = enumGISFeatureDataset;
     m_eGeomType = wkbUnknown;
     m_pSpatialTree = NULL;
@@ -524,7 +527,28 @@ bool wxGISPostgresFeatureDataset::Delete(ITrackCancel* const pTrackCancel)
 {
     if(m_poDS)
     {
-        OGRErr eErr = m_poDS->DeleteLayer(m_iLayer);
+        int iLayer = wxNOT_FOUND;
+        for (int i = 0; i < m_poDS->GetLayerCount(); ++i)
+        {
+            OGRLayer* poLayer = m_poDS->GetLayer(i);
+            if (NULL != poLayer && wxGISEQUAL(m_poLayer->GetName(), poLayer->GetName()))
+            {
+                iLayer = i;
+                break;
+            }
+        }
+
+        if (iLayer == wxNOT_FOUND)
+        {
+            if(pTrackCancel)
+            {
+                wxString sErr = wxString::Format(_("Operation '%s' failed! No Layer %s found to delete"), _("Delete"), wxString(m_poLayer->GetName(), wxConvUTF8).c_str());
+                pTrackCancel->PutMessage(sErr, wxNOT_FOUND, enumGISMessageErr);
+            }
+            return false;
+        }
+
+        OGRErr eErr = m_poDS->DeleteLayer(iLayer);
         if(eErr !=  OGRERR_NONE)
         {
             const char* err = CPLGetLastErrorMsg();

@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -43,6 +43,7 @@ public:
 	virtual long GetFID(void) const;
 	virtual wxGISGeometry GetGeometry(void) const;
 	virtual void SetGeometry(const wxGISGeometry &oGeom);
+    virtual wxGISSpatialTreeData* Clone() const;
 protected:
     wxGISGeometry m_Geom;
     long m_nFID;    
@@ -155,7 +156,7 @@ protected:
 	    double m_dfArea;
 	    explicit SortBoundedItemsByAreaEnlargement(const OGREnvelope &Env)
         {
-            m_dfArea = std::fabs((Env.MaxX - Env.MinX) * (Env.MaxY - Env.MinY));
+            m_dfArea = fabs((Env.MaxX - Env.MinX) * (Env.MaxY - Env.MinY));
         }
 
 	    bool operator() (const wxGISRTreeNode * const n1, const wxGISRTreeNode * const n2) const 
@@ -173,10 +174,10 @@ protected:
 	    {
             OGREnvelope IntersectEnv = n1->GetBounds();
             IntersectEnv.Intersect(m_Env);
-            double dfArea1 = std::fabs((IntersectEnv.MaxX - IntersectEnv.MinX) * (IntersectEnv.MaxY - IntersectEnv.MinY));
+            double dfArea1 = fabs((IntersectEnv.MaxX - IntersectEnv.MinX) * (IntersectEnv.MaxY - IntersectEnv.MinY));
             IntersectEnv = n2->GetBounds();
             IntersectEnv.Intersect(m_Env);
-            double dfArea2 = std::fabs((IntersectEnv.MaxX - IntersectEnv.MinX) * (IntersectEnv.MaxY - IntersectEnv.MinY));
+            double dfArea2 = fabs((IntersectEnv.MaxX - IntersectEnv.MinX) * (IntersectEnv.MaxY - IntersectEnv.MinY));
             
 		    return dfArea1 < dfArea2;
 	    }

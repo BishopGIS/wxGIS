@@ -3,11 +3,11 @@
  * Purpose:  wxGxToolExecuteView class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2010-2011 Bishop
+*   Copyright (C) 2010-2011,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -27,17 +27,20 @@
 #include "wxgis/catalogui/gxeventui.h"
 #include "wxgis/catalog/gxobject.h"
 #include "wxgis/catalogui/gxapplication.h"
+#include "wxgis/geoprocessingui/geoprocessingui.h"
 
 #include "wx/listctrl.h"
 #include "wx/imaglist.h"
 
-#define TOOLEXECVIEWSTYLE (wxLC_REPORT | wxBORDER_NONE | wxLC_AUTOARRANGE)
-#define TOOLEXECUTECTRLID WXGISHIGHEST + 1
+#define TOOLEXECVIEWSTYLE (wxLC_REPORT | wxBORDER_NONE | wxLC_EDIT_LABELS | wxLC_AUTOARRANGE)
 
 WXDLLIMPEXP_GIS_GPU int wxCALLBACK GxTaskCompareFunction(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
 
-/** \class wxGISToolExecuteView gxtoolexecview.h
-    \brief The tasks execution view class.
+/** @class wxGISToolExecuteView
+    
+    The tasks execution view class.
+
+    @library{geoprocessingui}
 */
 
 class WXDLLIMPEXP_GIS_GPU wxGISToolExecuteView :
@@ -71,7 +74,9 @@ public:
     virtual void OnContextMenu(wxContextMenuEvent& event);
 	virtual void ShowContextMenu(const wxPoint& pos);
     virtual void OnActivated(wxListEvent& event);
-	virtual void OnSelected(wxListEvent& event);
+    virtual void OnBeginLabelEdit(wxListEvent& event) = 0;
+    virtual void OnEndLabelEdit(wxListEvent& event) = 0;
+    virtual void OnSelected(wxListEvent& event);
 	virtual void OnDeselected(wxListEvent& event);
     virtual void OnChar(wxKeyEvent& event);
     virtual void OnBeginDrag(wxListEvent& event);

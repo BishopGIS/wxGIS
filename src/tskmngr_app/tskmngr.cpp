@@ -1,13 +1,13 @@
 /******************************************************************************
  * Project:  wxGIS (Task Manager)
  * Purpose:  Task manager class.
- * Author:   Bishop (aka Barishnikov Dmitriy), polimax@mail.ru
+ * Author:   Dmitry Barishnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2012-2013 Bishop
+*   Copyright (C) 2012-2013 Dmitry Barishnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -35,15 +35,16 @@ IMPLEMENT_CLASS(wxGISTaskManager, wxObject)
 wxGISTaskManager::wxGISTaskManager(void)
 {
     m_pNetworkService = NULL;
+    m_bExitState = false;
 
     m_nExitState = enumGISNetCmdStExit;
     m_nMaxExecTasks = wxThread::GetCPUCount();
     wxGISAppConfig oConfig = GetConfig();
 	if(oConfig.IsOk())
     {
-        m_nExitState = (wxGISNetCommandState)oConfig.ReadInt(enumGISHKCU, wxString(wxT("wxGISMon/app/exit_state")), enumGISNetCmdStExit);
-        m_nMaxExecTasks = oConfig.ReadInt(enumGISHKCU, wxString(wxT("wxGISMon/app/max_exec_tasks")), m_nMaxExecTasks);
-   }
+        m_nExitState = (wxGISNetCommandState)oConfig.ReadInt(enumGISHKCU, wxString(wxT("wxGISTaskNamager/app/exit_state")), enumGISNetCmdStExit);
+        m_nMaxExecTasks = oConfig.ReadInt(enumGISHKCU, wxString(wxT("wxGISTaskNamager/app/max_exec_tasks")), m_nMaxExecTasks);
+    }
     //m_nIdCounter = 0;
 }
 
@@ -85,7 +86,10 @@ void wxGISTaskManager::Exit(void)
     for( it = m_omCategories.begin(); it != m_omCategories.end(); ++it )
     {
         wxGISTaskCategory* pTaskCategory = it->second;
-        pTaskCategory->OnDestroy();
+        if (pTaskCategory != NULL)
+        {
+            pTaskCategory->OnDestroy();
+        }
     }    
 
     for( it = m_omCategories.begin(); it != m_omCategories.end(); ++it )
@@ -121,6 +125,7 @@ bool wxGISTaskManager::Init(void)
 
 void wxGISTaskManager::LoadCategories(const wxString &sPathToCategories)
 {
+    wxLogMessage(_("Read task categories from '%s'"), sPathToCategories.c_str());
     wxDir dir(sPathToCategories); 
     if( dir.IsOpened() )
     {
@@ -132,10 +137,12 @@ void wxGISTaskManager::LoadCategories(const wxString &sPathToCategories)
             wxGISTaskCategory* pGISTaskCategory = new wxGISTaskCategory(sPathToCategories + wxFileName::GetPathSeparator() + sCategoryName, this);
             if(pGISTaskCategory->Load())
             {
+                wxLogMessage(_("The category '%s' loaded"), sCategoryName.c_str());
                 m_omCategories[sCategoryName] = pGISTaskCategory;
             }
             else
             {
+                wxLogError(_("The category '%s' load failed "), sCategoryName.c_str());
                 wxDELETE(pGISTaskCategory);   
             }
             bContinue = dir.GetNext(&sCategoryName);
@@ -192,6 +199,7 @@ void wxGISTaskManager::ProcessNetCommand(const wxNetMessage &msg, int nUserId)
 {
     //check if command for some category
     wxJSONValue val = msg.GetValue();
+
     if(val.IsValid() && val.HasMember(wxT("cat")))
     {
         wxString sCategory = val[wxT("cat")].AsString();
@@ -206,7 +214,7 @@ void wxGISTaskManager::ProcessNetCommand(const wxNetMessage &msg, int nUserId)
     {
         case enumGISCmdDetails://Get manager details - properties + category list
             {
-                wxNetMessage msgout(enumGISNetCmdCmd, enumGISCmdDetails, enumGISPriorityHighest,  msg.GetId());
+                wxNetMessage msgout(enumGISNetCmdCmd, enumGISCmdDetails, enumGISPriorityHigh, msg.GetId());
                 msgout.SetValue(GetParamsAsJSON(msgout.GetValue()));
                 msgout.SetValue(GetChildrenAsJSON(msgout.GetValue()));
                 SendNetMessage(msgout, nUserId);                
@@ -214,7 +222,7 @@ void wxGISTaskManager::ProcessNetCommand(const wxNetMessage &msg, int nUserId)
             break; 
         case enumGISCmdChildren://Get category list
             {
-                wxNetMessage msgout(enumGISNetCmdCmd, enumGISCmdChildren, enumGISPriorityHighest,  msg.GetId());
+                wxNetMessage msgout(enumGISNetCmdCmd, enumGISCmdChildren, enumGISPriorityHigh, msg.GetId());
                 msgout.SetValue(GetChildrenAsJSON(msgout.GetValue()));
                 SendNetMessage(msgout, nUserId);                
             }
@@ -227,7 +235,7 @@ void wxGISTaskManager::ProcessNetCommand(const wxNetMessage &msg, int nUserId)
                 wxGISNetCommandState nExitSt = (wxGISNetCommandState)val.Get(wxT("exit_state"), wxJSONValue(m_nExitState)).AsLong();                
                 SetExitState(nExitSt);
 
-                wxNetMessage msgout(enumGISNetCmdCmd, enumGISCmdSetParam, enumGISPriorityNormal);
+                wxNetMessage msgout(enumGISNetCmdCmd, enumGISCmdSetParam, enumGISPriorityNormal,  msg.GetId());
                 msgout.SetValue(GetParamsAsJSON(msgout.GetValue()));
                 SendNetMessage(msgout, nUserId);                
             }
@@ -244,7 +252,7 @@ void wxGISTaskManager::ProcessNetCommand(const wxNetMessage &msg, int nUserId)
                 wxString sCatName = val[wxT("name")].AsString();   
                 if(sCatName.IsEmpty() || m_omCategories[sCatName])
                 {
-                    wxNetMessage msgout(enumGISNetCmdCmd, enumGISNetCmdStErr, enumGISPriorityHighest,  msg.GetId());
+                    wxNetMessage msgout(enumGISNetCmdCmd, enumGISNetCmdStErr, enumGISPriorityLow, msg.GetId());
                     msgout.SetMessage(_("The category name is empty or category is already exist"));
                     SendNetMessage(msgout, nUserId);                
                 }
@@ -252,12 +260,12 @@ void wxGISTaskManager::ProcessNetCommand(const wxNetMessage &msg, int nUserId)
                 {
                     wxString sCategoryName = ReplaceForbiddenCharsInFileName(sCatName);
                     wxString sCatPath = m_sUserConfigDir + wxFileName::GetPathSeparator() + sCategoryName;
-                    if(wxDir::Make(sCatPath))
+                    if (wxDir::Make(sCatPath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
                     {
                         wxGISTaskCategory* pGISTaskCategory = new wxGISTaskCategory(sCatPath, this);
                         m_omCategories[sCategoryName] = pGISTaskCategory;
                         
-                        wxNetMessage msgout(enumGISNetCmdCmd, enumGISCmdStAdd, enumGISPriorityNormal);
+                        wxNetMessage msgout(enumGISNetCmdCmd, enumGISCmdStAdd, enumGISPriorityNormal, msg.GetId());
                         wxJSONValue val;
                         val[wxT("name")] = sCatName;
                         msgout.SetValue(val);
@@ -292,8 +300,21 @@ void wxGISTaskManager::OnExit(void)
 {
     if(m_nExitState == enumGISNetCmdStNoExit)
         return;
-    if(m_nExitState == enumGISNetCmdStExitAfterExec && GetExecTaskCount() > 0)
+    if (m_nExitState == enumGISNetCmdStExitAfterExec && GetExecTaskCount() > 0)
+    {
+        m_bExitState = true;
         return;
+    }
+    //stop all tasks, and then exit
+    for(wxGISTaskCategoryMap::const_iterator it = m_omCategories.begin(); it != m_omCategories.end(); ++it)
+    {        
+        wxGISTaskCategory *pCat = it->second;
+        if(pCat)
+        {
+            pCat->OnDestroy();
+        }
+    }
+
     wxTheApp->Exit();
 }
 
@@ -357,6 +378,14 @@ wxString wxGISTaskManager::GetNewStorePath(const wxString &sAddToName, const wxS
     wxDateTime dt(wxDateTime::Now());
     wxString sTaskConfigPath = sSubTaskConfigDir + wxFileName::GetPathSeparator() + wxString::Format(wxT("%s%s.json"), dt.GetValue().ToString().c_str(), ReplaceForbiddenCharsInFileName(sAddToName).c_str());
     return sTaskConfigPath;
+}
+
+void wxGISTaskManager::OnCategoryExecutionFinished(const wxGISTaskCategory* pCat)
+{
+    if (m_pNetworkService != NULL && m_pNetworkService->GetConnectionCount() == 0 && m_bExitState) //no new connections and exit state is set to true
+    {
+        OnExit();
+    }
 }
 
 /*

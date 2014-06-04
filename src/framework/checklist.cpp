@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -69,6 +69,31 @@ long wxGISCheckList::GetItemData(long item) const
         return pdata->pUserData;
     else
         return 0;
+}
+
+void wxGISCheckList::CheckAll()
+{
+    for (size_t i = 0; i < GetItemCount(); ++i)
+    {
+        SetItemCheckState(i, 1);
+    }
+}
+
+void wxGISCheckList::UnCheckAll()
+{
+    for (size_t i = 0; i < GetItemCount(); ++i)
+    {
+        SetItemCheckState(i, 0);
+    }
+}
+
+void wxGISCheckList::InvertCheck()
+{
+    for (size_t i = 0; i < GetItemCount(); ++i)
+    {
+        int nState = GetItemCheckState(i) == 1 ? 0 : 1;
+        SetItemCheckState(i, nState);
+    }
 }
 
 void wxGISCheckList::OnLeftDown(wxMouseEvent& event)

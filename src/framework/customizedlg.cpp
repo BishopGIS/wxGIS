@@ -3,11 +3,11 @@
  * Purpose:  customize dialog class. Customize menues & toolbars
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009,2011-2013 Bishop
+*   Copyright (C) 2009,2011-2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -112,7 +112,7 @@ wxGISToolBarPanel::wxGISToolBarPanel(wxGISApplicationEx* pApp, wxWindow* parent,
 #endif
 	m_pContextMenu->Append(item);
 
-	this->SetSizer( bSizer );
+	this->SetSizerAndFit( bSizer );
 	this->Layout();
 
 	//load toolbars & menues
@@ -229,7 +229,7 @@ void wxGISToolBarPanel::LoadCommands(void)
 			wxString sName = wxStripMenuCodes(pCommand->GetCaption());
 			wxString sMessage = pCommand->GetMessage();
 
-			wxString sKeyCode = m_pApp->GetGISAcceleratorTable()->GetText(pCommand->GetID());
+			wxString sKeyCode = m_pApp->GetGISAcceleratorTable()->GetText(pCommand->GetId());
 			long pos = m_buttonslist->InsertItem(i, sName);
 			wxIcon oIcon = pCommand->GetBitmap();
 			if(oIcon.IsOk())
@@ -243,7 +243,7 @@ void wxGISToolBarPanel::LoadCommands(void)
             }
 			m_buttonslist->SetItem(pos, 1, sMessage);
 			m_buttonslist->SetItem(pos, 2, sKeyCode);
-			m_buttonslist->SetItemData(pos, pCommand->GetID());
+			m_buttonslist->SetItemData(pos, pCommand->GetId());
 		}
 		m_buttonslist->Update();
 	}
@@ -465,7 +465,7 @@ void wxGISToolBarPanel::OnCreateCommandBar(wxCommandEvent& event)
 					item.SetKind(wxITEM_SEPARATOR);
 					append_items.Add(item);
 					item.SetKind(pCmd->GetKind());
-					item.SetId(pCmd->GetID());
+					item.SetId(pCmd->GetId());
 					item.SetLabel(pCmd->GetCaption());
 					append_items.Add(item);
 				}
@@ -735,7 +735,7 @@ wxGISCommandPanel::wxGISCommandPanel( wxGISApplicationEx* pApp, wxWindow* parent
 #endif
 	m_pContextMenu->Append(item);
 
-	this->SetSizer( bSizer5 );
+    this->SetSizerAndFit(bSizer5);
 	this->Layout();
 
 	m_listBox1->Select(0);
@@ -781,7 +781,7 @@ void wxGISCommandPanel::OnListboxSelect(wxCommandEvent& event)
 	{
 		wxString sName = wxStripMenuCodes(CommandArray[i]->GetCaption());
 		wxString sMessage = CommandArray[i]->GetMessage();
-		wxString sKeyCode = m_pApp->GetGISAcceleratorTable()->GetText(CommandArray[i]->GetID());
+		wxString sKeyCode = m_pApp->GetGISAcceleratorTable()->GetText(CommandArray[i]->GetId());
 		long pos = m_listCtrl3->InsertItem(i, sName);
 		wxIcon oIcon = CommandArray[i]->GetBitmap();
 		if(oIcon.IsOk())
@@ -795,7 +795,7 @@ void wxGISCommandPanel::OnListboxSelect(wxCommandEvent& event)
         }
 		m_listCtrl3->SetItem(pos, 1, sMessage);
 		m_listCtrl3->SetItem(pos, 2, sKeyCode);
-		m_listCtrl3->SetItemData(pos,  CommandArray[i]->GetID());
+		m_listCtrl3->SetItemData(pos,  CommandArray[i]->GetId());
 	}
 	m_listCtrl3->Update();
 }
@@ -884,7 +884,7 @@ wxGISCustomizeDlg::wxGISCustomizeDlg( wxWindow* parent, wxWindowID id, const wxS
 	m_sdbSizer->Realize();
 	bSizerMain->Add( m_sdbSizer, 0, wxALL|wxEXPAND, 5 );
 
-	this->SetSizer( bSizerMain );
+    this->SetSizerAndFit(bSizerMain);
 	this->Layout();
 
     SerializeFramePos(false);

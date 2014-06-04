@@ -3,11 +3,11 @@
  * Purpose:  FeatureLayer header.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009,2011,2013 Bishop
+*   Copyright (C) 2009,2011,2013,2014 Bishop
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -25,8 +25,11 @@
 #include "wxgis/datasource/vectorop.h"
 #include "wxgis/carto/featurerenderer.h"
 
-/** \class wxGISFeatureLayer featurelayer.h
-    \brief The class represent vector datasource in map.
+/** @class wxGISFeatureLayer
+    
+    The class represent vector datasource in map.
+
+    @library{carto}
 */
 
 class WXDLLIMPEXP_GIS_CRT wxGISFeatureLayer :
@@ -34,7 +37,7 @@ class WXDLLIMPEXP_GIS_CRT wxGISFeatureLayer :
 {
     DECLARE_CLASS(wxGISFeatureLayer)
 public:
-	wxGISFeatureLayer(const wxString &sName = _("new layer"), wxGISDataset* pwxGISDataset = NULL);
+	wxGISFeatureLayer(const wxString &sName = _("new feature layer"), wxGISDataset* pwxGISDataset = NULL);
 	virtual ~wxGISFeatureLayer(void);
 //wxGISLayer
 	virtual bool Draw(wxGISEnumDrawPhase DrawPhase, ITrackCancel* const pTrackCancel = NULL);

@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -20,15 +20,15 @@
  ****************************************************************************/
 
 #include "wxgis/catalogui/gxspatreffolderui.h"
-/*
 #include "wxgis/catalogui/gxcatalogui.h"
 
 #include "../../art/folder_prj_16.xpm"
 #include "../../art/folder_prj_48.xpm"
 
-/////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------
 // wxGxSpatialReferencesFolder
-/////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------
+
 IMPLEMENT_DYNAMIC_CLASS(wxGxSpatialReferencesFolderUI, wxGxSpatialReferencesFolder)
 
 wxGxSpatialReferencesFolderUI::wxGxSpatialReferencesFolderUI(void) : wxGxSpatialReferencesFolder()
@@ -51,28 +51,19 @@ wxIcon wxGxSpatialReferencesFolderUI::GetSmallImage(void)
 	return m_SmallIcon;
 }
 
-void wxGxSpatialReferencesFolderUI::EmptyChildren(void)
+wxGxObject* wxGxSpatialReferencesFolderUI::GetArchiveFolder(wxGxObject *oParent, const wxString &soName, const CPLString &soPath)
 {
-	for(size_t i = 0; i < m_Children.size(); ++i)
-	{
-		m_Children[i]->Detach();
-		wxDELETE(m_Children[i]);
-	}
-	m_Children.clear();
-	m_bIsChildrenLoaded = false;
+    wxGxPrjFolderUI* pFolder = new wxGxPrjFolderUI(oParent, soName, soPath, m_LargeIcon, m_SmallIcon);
+    return wxStaticCast(pFolder, wxGxObject);
 }
 
-IGxObject* wxGxSpatialReferencesFolderUI::GetArchiveFolder(CPLString szPath, wxString soName)
-{
-	wxGxPrjFolderUI* pFolder = new wxGxPrjFolderUI(szPath, soName, m_LargeIcon, m_SmallIcon);
-	return static_cast<IGxObject*>(pFolder);
-}
 
-/////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------
 // wxGxPrjFolderUI
-/////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------
+IMPLEMENT_CLASS(wxGxPrjFolderUI, wxGxArchiveFolderUI)
 
-wxGxPrjFolderUI::wxGxPrjFolderUI(CPLString Path, wxString Name, wxIcon LargeIcon, wxIcon SmallIcon) : wxGxArchiveFolderUI(Path, Name)
+wxGxPrjFolderUI::wxGxPrjFolderUI(wxGxObject *oParent, const wxString &soName, const CPLString &soPath, wxIcon LargeIcon, wxIcon SmallIcon) : wxGxArchiveFolderUI(oParent, soName, soPath, LargeIcon, SmallIcon)
 {
     m_LargeIcon = LargeIcon;
     m_SmallIcon = SmallIcon;
@@ -92,9 +83,8 @@ wxIcon wxGxPrjFolderUI::GetSmallImage(void)
 	return m_SmallIcon;
 }
 
-IGxObject* wxGxPrjFolderUI::GetArchiveFolder(CPLString szPath, wxString soName)
+wxGxObject* wxGxPrjFolderUI::GetArchiveFolder(wxGxObject *oParent, const wxString &soName, const CPLString &soPath)
 {
-	wxGxPrjFolderUI* pFolder = new wxGxPrjFolderUI(szPath, soName, m_LargeIcon, m_SmallIcon);
-	return static_cast<IGxObject*>(pFolder);
+    wxGxPrjFolderUI* pFolder = new wxGxPrjFolderUI(oParent, soName, soPath, m_LargeIcon, m_SmallIcon);
+    return wxStaticCast(pFolder, wxGxObject);
 }
-*/

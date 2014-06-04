@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -100,7 +100,8 @@ class wxGISFeatureDetailsPanel : public wxPanel
 		ID_WG_COPY,
 		ID_WG_HIDE,
         ID_WG_RESET_SORT,
-        ID_WG_RESET_HIDE
+        ID_WG_RESET_HIDE,
+        ID_WG_ENCODING_START
 	};
 public:
 	wxGISFeatureDetailsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL );
@@ -185,6 +186,7 @@ public:
 	virtual void OnMenu(wxCommandEvent& event);
 	virtual void OnItemRightClick(wxTreeEvent& event);
 	virtual void OnDoubleClickSash(wxSplitterEvent& event);
+    virtual void SetEncoding(const wxFontEncoding& eEnc);
 protected:
 	wxBoxSizer* m_bMainSizer;
 	wxFlexGridSizer* m_fgTopSizer;

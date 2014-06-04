@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -20,6 +20,7 @@
  ****************************************************************************/
 
 #include "wxgis/catalog/gxdbconnections.h"
+#include "wxgis/catalog/gxdiscconnection.h"
 #include "wxgis/core/config.h"
 #include "wxgis/datasource/datasource.h"
 
@@ -153,7 +154,7 @@ void wxGxDBConnections::StartWatcher(void)
 
 void wxGxDBConnections::OnFileSystemEvent(wxFileSystemWatcherEvent& event)
 {
-    wxLogDebug(wxT("*** %s ***"), event.ToString().c_str());
+    //wxLogDebug(wxT("*** %s ***"), event.ToString().c_str());
     switch(event.GetChangeType())
     {
     case wxFSW_EVENT_CREATE:

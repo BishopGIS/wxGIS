@@ -1,13 +1,13 @@
 /******************************************************************************
  * Project:  wxGIS (Task Manager)
  * Purpose:  Network classes.
- * Author:   Bishop (aka Barishnikov Dmitriy), polimax@mail.ru
+ * Author:   Dmitry Barishnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2012 Bishop
+*   Copyright (C) 2012,2014 Dmitry Barishnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -24,8 +24,11 @@
 #include "wxgis/net/network.h"
 #include "wxgis/net/servernet.h"
 
-/** \class wxGISLocalNetworkService net.h
-    \brief A local network server.
+/** @class wxGISLocalNetworkService
+
+    A local network server.
+
+    @library{net}
 */
 class wxGISLocalNetworkService : 
     public wxGISNetworkService
@@ -41,8 +44,11 @@ public:
     virtual bool CanConnect(const wxString &sName, const wxString &sPass);
 };
 
-/** \class wxGISLocalNetworkPlugin net.h
-    \brief A Server side Network Plugin.
+/** @class wxGISLocalNetworkPlugin
+
+    A Server side Network Plugin.
+
+    @library{net}
 */
 class wxGISLocalNetworkPlugin : public INetPlugin
 {
@@ -70,8 +76,11 @@ protected:
     DECLARE_EVENT_TABLE()
 };
 
-/** \class wxGISLocalServerConnection net.h
-    \brief The network server connection interface class.
+/** @class wxGISLocalServerConnection
+
+    The network server connection interface class.
+
+    @library{net}
 */
 class wxGISLocalServerConnection : public wxGISNetServerConnection
 {

@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -34,11 +34,167 @@
 
 #define MAX_FEATURES_FORINSERT 1000
 
-bool CopyRows(wxGISFeatureDataset* const pSrcDataSet, wxGISFeatureDataset* const pDstDataSet, ITrackCancel* const pTrackCancel)
+bool CopyRows(wxGISTable* const pSrcDataSet, wxGISTable* const pDstDataSet, ITrackCancel* const pTrackCancel)
+{
+    //progress & messages
+    IProgressor* pProgressor(NULL);
+    if (pTrackCancel)
+    {
+        pProgressor = pTrackCancel->GetProgressor();
+    }
+
+    int nCounter(0);
+    if (pProgressor)
+    {
+        pProgressor->SetRange(pSrcDataSet->GetFeatureCount(false, pTrackCancel));
+    }
+
+    wxFontEncoding OutputEncoding = pDstDataSet->GetEncoding();
+    CPLErrorReset();
+
+    //create src -> dst field mapping
+
+    OGRFeatureDefn *pFeatureDefn = pDstDataSet->GetDefinition();
+
+    if (NULL == pFeatureDefn)
+    {
+        if (pTrackCancel)
+        {
+            pTrackCancel->PutMessage(_("Input dataset is corrupt"), wxNOT_FOUND, enumGISMessageErr);
+        }
+        return false;
+    }
+
+    //TODO: move field map to create dataset and export function as input param
+    struct _st_field_map
+    {
+        unsigned nDstFieldNo;
+        unsigned nSrsFieldNo;
+        OGRFieldType eFieldType;
+    };
+
+    wxVector<_st_field_map> staFieldMap;
+
+    OGRFeatureDefn *pSrcFeatureDefn = pSrcDataSet->GetDefinition();
+    for (size_t i = 0; i < pFeatureDefn->GetFieldCount(); ++i)
+    {
+        OGRFieldDefn *pFieldDefn = pFeatureDefn->GetFieldDefn(i);
+        if (NULL != pFieldDefn)
+        {
+            if (pSrcFeatureDefn->GetFieldCount() > i)
+                //                int nSrcField = pSrcFeatureDefn->GetFieldIndex(pFieldDefn->GetNameRef());
+                //                if (nSrcField != wxNOT_FOUND)
+            {
+                OGRFieldType eType = pFieldDefn->GetType();
+                _st_field_map record = { i, i, eType };
+                staFieldMap.push_back(record);
+            }
+        }
+    }
+
+#ifndef CPL_RECODE_ICONV
+    wxEncodingConverter oEncConverter;
+    bool bFastConv = oEncConverter.Init(pSrcDataSet->GetEncoding(), pDstDataSet->GetEncoding(), wxCONVERT_SUBSTITUTE);
+    char szMaxStr[4096];
+#endif
+
+    pSrcDataSet->Reset();
+    wxGISFeature Feature;
+    size_t i;
+    OGRwkbGeometryType eGeoFieldtype = pFeatureDefn->GetGeomType();
+    while ((Feature = pSrcDataSet->Next()).IsOk())
+    {
+        if (pTrackCancel && !pTrackCancel->Continue())
+        {
+            wxString sErr(_("Interrupted by user"));
+            CPLString sFullErr(sErr.ToUTF8());
+            CPLError(CE_Warning, CPLE_AppDefined, sFullErr);
+
+            if (pTrackCancel)
+            {
+                pTrackCancel->PutMessage(wxString(sFullErr, wxConvUTF8), wxNOT_FOUND, enumGISMessageErr);
+            }
+            return false;
+        }
+
+
+        wxGISFeature newFeature = pDstDataSet->CreateFeature();
+
+        for (i = 0; i < staFieldMap.size(); ++i)
+        {
+            switch (staFieldMap[i].eFieldType)
+            {
+            case OFTRealList:
+                newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsDoubleList(staFieldMap[i].nSrsFieldNo));
+                break;
+            case OFTIntegerList:
+                newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsIntegerList(staFieldMap[i].nSrsFieldNo));
+                break;
+            case OFTStringList:
+                newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsStringList(staFieldMap[i].nSrsFieldNo));
+                break;
+            case OFTString:
+#ifdef CPL_RECODE_ICONV
+                //                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsString(staFieldMap[i].nSrsFieldNo));
+                //                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsChar(staFieldMap[i].nSrsFieldNo));
+                //                    break;
+#else
+                if (bFastConv)
+                {
+                    const char* pszStr = Feature.GetFieldAsChar(staFieldMap[i].nSrsFieldNo);
+                    if (oEncConverter.Convert(pszStr, szMaxStr))
+                    {
+                        newFeature.SetField(staFieldMap[i].nDstFieldNo, szMaxStr);
+                        break;
+                    }
+                }
+#endif //CPL_RECODE_ICONV
+            case OFTDate:
+            case OFTTime:
+            case OFTDateTime:
+                //                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsDateTime(staFieldMap[i].nSrsFieldNo));
+                //                    break;
+            case OFTReal:
+                //                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsDouble(staFieldMap[i].nSrsFieldNo));
+                //                    break;
+            case OFTInteger:
+                //                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsInteger(staFieldMap[i].nSrsFieldNo));
+                //                    break;
+            default:
+                //TODO: recode to output encoding if pDstDataSet encoding diffes from src
+                newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetRawField(staFieldMap[i].nSrsFieldNo));
+                //                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsString(staFieldMap[i].nSrsFieldNo));
+                break;
+            };
+        }
+
+        OGRErr eErr = pDstDataSet->StoreFeature(newFeature);
+        if (eErr != OGRERR_NONE)
+        {
+            wxString sErr = wxString::Format(_("Error create feature!\nSource feature FID:%d\nOGR error: "), Feature.GetFID());
+            CPLString sFullErr(sErr.mb_str(wxConvUTF8));
+            sFullErr += CPLGetLastErrorMsg();
+            CPLError(CE_Failure, CPLE_AppDefined, sFullErr);
+            if (pTrackCancel)
+            {
+                pTrackCancel->PutMessage(wxString(sFullErr, wxConvUTF8), wxNOT_FOUND, enumGISMessageErr);
+            }
+        }
+
+        if (pProgressor)
+        {
+            pProgressor->SetValue(nCounter++);
+        }
+    }
+
+    return true;
+}
+
+bool CopyRows(wxGISFeatureDataset* const pSrcDataSet, wxGISFeatureDataset* const pDstDataSet, OGRwkbGeometryType eFilterGeomType, bool bToMulti, ITrackCancel* const pTrackCancel)
 {
     const wxGISSpatialReference oSrcSRS = pSrcDataSet->GetSpatialReference();
     const wxGISSpatialReference oDstSRS = pDstDataSet->GetSpatialReference();
-    OGRCoordinateTransformation *poCT(NULL);
+    OGRCoordinateTransformation *poCT = NULL;
     
     if (oSrcSRS.IsOk() && oDstSRS.IsOk() && !oSrcSRS.IsSame(oDstSRS))
     {
@@ -113,12 +269,22 @@ bool CopyRows(wxGISFeatureDataset* const pSrcDataSet, wxGISFeatureDataset* const
             OGRFieldDefn *pFieldDefn = pFeatureDefn->GetFieldDefn(i);
             if (NULL != pFieldDefn)
             {
-                if (pSrcFeatureDefn->GetFieldCount() > i)
-//                int nSrcField = pSrcFeatureDefn->GetFieldIndex(pFieldDefn->GetNameRef());
-//                if (nSrcField != wxNOT_FOUND)
+                int nSrcFieldIndex = -1;
+                if (pDstDataSet->GetSubType() == enumVecESRIShapefile) // if the shape is dest the field names cut to 8 chars and so the field names are differes
+                {
+                    if (EQUALN(pSrcFeatureDefn->GetFieldDefn(i)->GetNameRef(), pFieldDefn->GetNameRef(), 8))
+                    {
+                        nSrcFieldIndex = i;
+                    }
+                }
+                else
+                {
+                    nSrcFieldIndex = pSrcFeatureDefn->GetFieldIndex(pFieldDefn->GetNameRef());
+                }
+                if (nSrcFieldIndex != -1)
                 {
                     OGRFieldType eType = pFieldDefn->GetType();
-                    _st_field_map record = { i, i, eType };
+                    _st_field_map record = { i, nSrcFieldIndex, eType };
                     staFieldMap.push_back(record);
                 }
             }
@@ -158,9 +324,28 @@ bool CopyRows(wxGISFeatureDataset* const pSrcDataSet, wxGISFeatureDataset* const
         if (Geom.IsOk())
         {
             OGRGeometry *pNewGeom = NULL;
-            if (eGeoFieldtype != Geom.GetType())
+            OGRwkbGeometryType eGeomType = Geom.GetType();
+            if (eFilterGeomType != wkbUnknown)
             {
-                switch (eGeoFieldtype)
+                OGRwkbGeometryType eTestGeomType = eGeomType;
+                if (bToMulti && wkbFlatten(eGeomType) > 1 && wkbFlatten(eGeomType) < 4)
+                {
+                    eTestGeomType = (OGRwkbGeometryType)(eGeomType + 3);
+                }
+
+                if (eFilterGeomType != eTestGeomType)
+                {
+                    if (pProgressor)
+                    {
+                        pProgressor->SetValue(nCounter++);
+                    }
+                    continue;
+                }
+            }
+
+            if (eGeoFieldtype != eGeomType)
+            {
+                switch (wkbFlatten(eGeoFieldtype))
                 {
                 case wkbLineString:
                     pNewGeom = OGRGeometryFactory::forceToLineString(Geom.Copy());
@@ -191,10 +376,10 @@ bool CopyRows(wxGISFeatureDataset* const pSrcDataSet, wxGISFeatureDataset* const
 
             if (NULL != poCT)
             {
-                if (wkbFlatten(Geom.GetType()) != wkbUnknown)
+                if (Geom.GetType() != wkbUnknown && Geom.GetType() != wkbNone)
                 {                    
                     OGRErr eErr = pNewGeom->transform(poCT);
-                    if (eErr == OGRERR_NONE)
+                    if (eErr != OGRERR_NONE)
                     {
                         pTrackCancel->PutMessage(wxString::Format(_("Geometry transform failed\nFeature id %d"), Feature.GetFID()), wxNOT_FOUND, enumGISMessageWarning);
                     }
@@ -230,17 +415,6 @@ bool CopyRows(wxGISFeatureDataset* const pSrcDataSet, wxGISFeatureDataset* const
                 case OFTStringList:
                     newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsStringList(staFieldMap[i].nSrsFieldNo));
                     break;
-                case OFTDate:
-                case OFTTime:
-                case OFTDateTime:
-//                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsDateTime(staFieldMap[i].nSrsFieldNo));
-//                    break;
-                case OFTReal:
-//                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsDouble(staFieldMap[i].nSrsFieldNo));
-//                    break;
-                case OFTInteger:
-//                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsInteger(staFieldMap[i].nSrsFieldNo));
-//                    break;
                 case OFTString:
 #ifdef CPL_RECODE_ICONV
 //                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsString(staFieldMap[i].nSrsFieldNo));
@@ -257,9 +431,21 @@ bool CopyRows(wxGISFeatureDataset* const pSrcDataSet, wxGISFeatureDataset* const
                         }
                     }
 #endif //CPL_RECODE_ICONV
+                case OFTDate:
+                case OFTTime:
+                case OFTDateTime:
+//                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsDateTime(staFieldMap[i].nSrsFieldNo));
+//                    break;
+                case OFTReal:
+//                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsDouble(staFieldMap[i].nSrsFieldNo));
+//                    break;
+                case OFTInteger:
+//                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsInteger(staFieldMap[i].nSrsFieldNo));
+//                    break;
                 default:
-                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetRawField(staFieldMap[i].nSrsFieldNo));
-//                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsString(staFieldMap[i].nSrsFieldNo));
+                    //TODO: recode to output encoding if pDstDataSet encoding diffes from src
+//                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetRawField(staFieldMap[i].nSrsFieldNo));
+                    newFeature.SetField(staFieldMap[i].nDstFieldNo, Feature.GetFieldAsString(staFieldMap[i].nSrsFieldNo));
                     break;
                 };
             }
@@ -292,20 +478,106 @@ bool CopyRows(wxGISFeatureDataset* const pSrcDataSet, wxGISFeatureDataset* const
     return true;
 }
 
-bool ExportFormatEx(wxGISFeatureDataset* const pSrsDataSet, const CPLString &sPath, const wxString &sName, wxGxObjectFilter* const pFilter, const wxGISSpatialFilter &SpaFilter, OGRFeatureDefn* const poFields, const wxGISSpatialReference &oSpatialRef, char ** papszDataSourceOptions, char ** papszLayerOptions, ITrackCancel* const pTrackCancel)
+bool ExportFormatEx(wxGISTable* const pSrsDataSet, const CPLString &sPath, const wxString &sName, wxGxObjectFilter* const pFilter, const wxGISSpatialFilter &SpaFilter, OGRFeatureDefn* const poFields, char ** papszDataSourceOptions, char ** papszLayerOptions, bool bCreateEmpty, ITrackCancel* const pTrackCancel)
 {
     wxCHECK_MSG(NULL != pSrsDataSet && NULL != pFilter && NULL != poFields, false, wxT("Input data are invalid"));
 
-    wxGISFeatureDataset* pDstDataSet = wxDynamicCast(CreateDataset(sPath, sName, pFilter, poFields, oSpatialRef, papszDataSourceOptions, papszLayerOptions, pTrackCancel), wxGISFeatureDataset);
+    if (pTrackCancel)
+    {
+        if (SpaFilter.GetWhereClause().IsEmpty())
+        {
+            pTrackCancel->PutMessage(wxString::Format(_("Start copy records from '%s' to '%s'"), pSrsDataSet->GetName().c_str(), sName.c_str()), wxNOT_FOUND, enumGISMessageNorm);
+        }
+        else
+        {
+            pTrackCancel->PutMessage(wxString::Format(_("Start copy records from '%s' to '%s'\nWHERE %s"), pSrsDataSet->GetName().c_str(), sName.c_str(), SpaFilter.GetWhereClause().c_str()), wxNOT_FOUND, enumGISMessageNorm);
+        }
+    }
+
+    if (pSrsDataSet->GetFeatureCount(false, pTrackCancel) == 0 && !bCreateEmpty)
+    {
+        if (pTrackCancel)
+        {
+            pTrackCancel->PutMessage(_("No records to export"), wxNOT_FOUND, enumGISMessageNorm);
+        }
+
+        return true;
+    }
+
+    wxGISTable* pDstDataSet = wxDynamicCast(CreateDataset(sPath, sName, pFilter, poFields, wxNullSpatialReference, papszDataSourceOptions, papszLayerOptions, pTrackCancel), wxGISTable);
     if (NULL == pDstDataSet)
     {
         wxString sErr(_("Error creating new dataset!\nOGR error: "));
         CPLString sFullErr(sErr.mb_str(wxConvUTF8));
         sFullErr += CPLGetLastErrorMsg();
-        CPLError( CE_Failure, CPLE_AppDefined, sFullErr);
+        CPLError(CE_Failure, CPLE_AppDefined, sFullErr);
         if (pTrackCancel)
         {
             pTrackCancel->PutMessage(wxString(sFullErr, wxConvUTF8), wxNOT_FOUND, enumGISMessageErr);
+        }
+        return false;
+    }
+
+
+    OGRErr eErr = pDstDataSet->StartTransaction();
+
+    //copy data
+    if (!CopyRows(pSrsDataSet, pDstDataSet, pTrackCancel))
+    {
+        wxString sErr(_("Error copying data to a new dataset!\nOGR error: "));
+        CPLString sFullErr(sErr.mb_str(wxConvUTF8));
+        sFullErr += CPLGetLastErrorMsg();
+        CPLError(CE_Failure, CPLE_FileIO, sFullErr);
+        if (pTrackCancel)
+        {
+            pTrackCancel->PutMessage(wxString(sFullErr, wxConvUTF8), wxNOT_FOUND, enumGISMessageErr);
+        }
+
+        //remove filter
+        pSrsDataSet->SetFilter();
+        eErr = pDstDataSet->RollbackTransaction();
+        return false;
+    }
+
+    //remove filter
+    pSrsDataSet->SetFilter();
+
+    CPLErrorReset();
+    eErr = pDstDataSet->CommitTransaction();
+    if (CPLGetLastErrorType() != OGRERR_NONE)
+    {
+        pDstDataSet->Close();
+
+        wxString sErr(_("Error copying data to a new dataset!\nOGR error: "));
+        CPLString sFullErr(sErr.mb_str(wxConvUTF8));
+        sFullErr += CPLGetLastErrorMsg();
+        CPLError(CE_Failure, CPLE_FileIO, sFullErr);
+        if (pTrackCancel)
+        {
+            pTrackCancel->PutMessage(wxString(sFullErr, wxConvUTF8), wxNOT_FOUND, enumGISMessageErr);
+        }
+        return false;
+    }
+
+
+    pDstDataSet->Close();
+
+    return eErr == OGRERR_NONE;
+}
+
+bool ExportFormatEx(wxGISFeatureDataset* const pSrsDataSet, const CPLString &sPath, const wxString &sName, wxGxObjectFilter* const pFilter, const wxGISSpatialFilter &SpaFilter, OGRFeatureDefn* const poFields, const wxGISSpatialReference &oSpatialRef, char ** papszDataSourceOptions, char ** papszLayerOptions, bool bCreateEmpty, OGRwkbGeometryType eFilterGeomType, bool bToMulti, ITrackCancel* const pTrackCancel)
+{
+    wxCHECK_MSG(NULL != pSrsDataSet && NULL != pFilter && NULL != poFields, false, wxT("Input data are invalid"));
+
+    CPLString szBaseName = (char*)CPLFormFilename(sPath, sName.ToUTF8(), pFilter->GetExt().ToUTF8());
+    wxGxObject* pObj = wxDynamicCast(GetGxCatalog()->FindGxObjectByPath(wxString(szBaseName, wxConvUTF8)), wxGxObject);
+    if (!OverWriteGxObject(pObj, pTrackCancel))
+    {
+        wxString sErr(_("Overwrite failed"));
+        CPLError(CE_Failure, CPLE_AppDefined, sErr.mb_str(wxConvUTF8));
+        if (pTrackCancel)
+        {
+            pTrackCancel->PutMessage(sErr, wxNOT_FOUND, enumGISMessageErr);
         }
         return false;
     }
@@ -325,10 +597,36 @@ bool ExportFormatEx(wxGISFeatureDataset* const pSrsDataSet, const CPLString &sPa
     //set filter
     pSrsDataSet->SetFilter(SpaFilter);
 
+    if (pSrsDataSet->GetFeatureCount(true, pTrackCancel) == 0 && !bCreateEmpty)
+    {
+        pSrsDataSet->SetFilter();
+        if (pTrackCancel)
+        {
+            pTrackCancel->PutMessage(_("No records to export"), wxNOT_FOUND, enumGISMessageNorm);
+        }
+
+        return true;
+    }
+
+    wxGISFeatureDataset* pDstDataSet = wxDynamicCast(CreateDataset(sPath, sName, pFilter, poFields, oSpatialRef, papszDataSourceOptions, papszLayerOptions, pTrackCancel), wxGISFeatureDataset);
+    if (NULL == pDstDataSet)
+    {
+        wxString sErr(_("Error creating new dataset!\nOGR error: "));
+        CPLString sFullErr(sErr.mb_str(wxConvUTF8));
+        sFullErr += CPLGetLastErrorMsg();
+        CPLError( CE_Failure, CPLE_AppDefined, sFullErr);
+        if (pTrackCancel)
+        {
+            pTrackCancel->PutMessage(wxString(sFullErr, wxConvUTF8), wxNOT_FOUND, enumGISMessageErr);
+        }
+        return false;
+    }
+
+
     OGRErr eErr = pDstDataSet->StartTransaction();
 
     //copy data
-    if (!CopyRows(pSrsDataSet, pDstDataSet, pTrackCancel))
+    if (!CopyRows(pSrsDataSet, pDstDataSet, eFilterGeomType, bToMulti, pTrackCancel))
     {
         wxString sErr(_("Error copying data to a new dataset!\nOGR error: "));
         CPLString sFullErr(sErr.mb_str(wxConvUTF8));
@@ -348,14 +646,78 @@ bool ExportFormatEx(wxGISFeatureDataset* const pSrsDataSet, const CPLString &sPa
     //remove filter
     pSrsDataSet->SetFilter();
 
+    CPLErrorReset();
     eErr = pDstDataSet->CommitTransaction();
+    if (CPLGetLastErrorType() != OGRERR_NONE)
+    {
+        pDstDataSet->Close();
+
+        wxString sErr(_("Error copying data to a new dataset!\nOGR error: "));
+        CPLString sFullErr(sErr.mb_str(wxConvUTF8));
+        sFullErr += CPLGetLastErrorMsg();
+        CPLError( CE_Failure, CPLE_FileIO, sFullErr );
+        if (pTrackCancel)
+        {
+            pTrackCancel->PutMessage(wxString(sFullErr, wxConvUTF8), wxNOT_FOUND, enumGISMessageErr);
+        }
+        return false;
+    }
 
     pDstDataSet->Close();
 
     return eErr == OGRERR_NONE;
 }
 
-bool ExportFormat(wxGISFeatureDataset* const pSrsDataSet, const CPLString &sPath, const wxString &sName, wxGxObjectFilter* const pFilter, const wxGISSpatialFilter &SpaFilter, char ** papszDataSourceOptions, char ** papszLayerOptions, ITrackCancel* const pTrackCancel)
+bool ExportFormat(wxGISTable* const pSrsDataSet, const CPLString &sPath, const wxString &sName, wxGxObjectFilter* const pFilter, const wxGISSpatialFilter &SpaFilter, char ** papszDataSourceOptions, char ** papszLayerOptions, ITrackCancel* const pTrackCancel)
+{
+    wxCHECK_MSG(NULL != pSrsDataSet && NULL != pFilter, false, wxT("Input data are invalid"));
+    wxString sExt = pFilter->GetExt();
+
+    if (pTrackCancel)
+    {
+        pTrackCancel->PutMessage(wxString::Format(_("Exporting %s to %s"), pSrsDataSet->GetName().c_str(), wxString(sName + wxT(".") + sExt).c_str()), wxNOT_FOUND, enumGISMessageTitle);
+    }
+
+    OGRFeatureDefn *pDef = pSrsDataSet->GetDefinition();
+    if (NULL == pDef)
+    {
+        wxString sErr(_("Error read dataset definition"));
+        CPLError(CE_Failure, CPLE_AppDefined, sErr.mb_str(wxConvUTF8));
+        if (pTrackCancel)
+        {
+            pTrackCancel->PutMessage(sErr, wxNOT_FOUND, enumGISMessageErr);
+        }
+        return false;
+    }
+
+    if (pTrackCancel)
+    {
+        pTrackCancel->PutMessage(_("Get features..."), wxNOT_FOUND, enumGISMessageNorm);
+    }
+
+    CPLString szBaseName = (char*)CPLFormFilename(sPath, sName.mb_str(wxConvUTF8), sExt.mb_str(wxConvUTF8));
+    wxGxObject* pObj = wxDynamicCast(GetGxCatalog()->FindGxObjectByPath(wxString(szBaseName, wxConvUTF8)), wxGxObject);
+    if (!OverWriteGxObject(pObj, pTrackCancel))
+    {
+        wxString sErr(_("Overwrite failed"));
+        CPLError(CE_Failure, CPLE_AppDefined, sErr.mb_str(wxConvUTF8));
+        if (pTrackCancel)
+        {
+            pTrackCancel->PutMessage(sErr, wxNOT_FOUND, enumGISMessageErr);
+        }
+        return false;
+    }
+
+    wxGISConfigOptionReset reset_copy("PG_USE_COPY", "YES", CPLGetConfigOption("PG_USE_COPY", "YES"));
+
+    if (!ExportFormatEx(pSrsDataSet, sPath, sName, pFilter, SpaFilter, pDef, papszDataSourceOptions, papszLayerOptions, true, pTrackCancel))
+    {
+        return false;
+    }
+    return true;
+}
+
+bool ExportFormat(wxGISFeatureDataset* const pSrsDataSet, const CPLString &sPath, const wxString &sName, wxGxObjectFilter* const pFilter, const wxGISSpatialFilter &SpaFilter, char ** papszDataSourceOptions, char ** papszLayerOptions, bool bToMulti, ITrackCancel* const pTrackCancel)
 {
     wxCHECK_MSG(NULL != pSrsDataSet && NULL != pFilter, false, wxT("Input data are invalid"));
 
@@ -415,247 +777,97 @@ bool ExportFormat(wxGISFeatureDataset* const pSrsDataSet, const CPLString &sPath
     wxGISSpatialFilter oNewSpaFilter(SpaFilter);
     if(bIsMultigeom)
     {
-        //export points
-        if (sWhereClause.IsEmpty())
-        {
-            oNewSpaFilter.SetWhereClause(wxT("OGR_GEOMETRY='POINT'"));
-        }
-        else
-        {
-            oNewSpaFilter.SetWhereClause(sWhereClause + wxT(" AND OGR_GEOMETRY='POINT'"));
-        }
+        wxArrayString saIgnoredFields = pSrsDataSet->GetFieldNames();
+        saIgnoredFields.Add(wxT("OGR_STYLE"));
+        pSrsDataSet->SetIgnoredFields(saIgnoredFields);
+        pSrsDataSet->Reset();
 
+        std::map<OGRwkbGeometryType, int> mnCounts;
+
+        IProgressor* pProgressor(NULL);
         if (pTrackCancel)
         {
-            pTrackCancel->PutMessage(wxString::Format(_("Get '%s' features"), wxT("POINT")), wxNOT_FOUND, enumGISMessageNorm);
-        }
+            pTrackCancel->PutMessage(_("Get feature count"), wxNOT_FOUND, enumGISMessageNorm);
+            pProgressor = pTrackCancel->GetProgressor();
+        }   
 
-        //delete exist
+        int nCounter(0);
+        if (pProgressor)
+        {
+            pProgressor->SetRange(pSrsDataSet->GetFeatureCount(false, pTrackCancel));
+        }
         
-        CPLString szBaseName = (char*)CPLFormFilename(sPath, wxString(sName + wxString(_("_point"))).mb_str(wxConvUTF8), sExt.mb_str(wxConvUTF8));
-        wxGxObject* pObj = wxDynamicCast(GetGxCatalog()->FindGxObjectByPath(wxString(szBaseName, wxConvUTF8)), wxGxObject);
-        if (!OverWriteGxObject(pObj, pTrackCancel))
+        wxGISFeature Feature;
+        while ((Feature = pSrsDataSet->Next()).IsOk())
         {
-            wxString sErr(_("Overwrite failed"));
-            CPLError(CE_Failure, CPLE_AppDefined, sErr.mb_str(wxConvUTF8));
-            if (pTrackCancel)
+            //check if Feature will destroy by Ref Count
+            wxGISGeometry Geom = Feature.GetGeometry();
+            if (Geom.IsOk())
             {
-                pTrackCancel->PutMessage(sErr, wxNOT_FOUND, enumGISMessageErr);
+                OGRwkbGeometryType eFeatureGeomType = Geom.GetType();
+                if (bToMulti && wkbFlatten(eFeatureGeomType) > 1 && wkbFlatten(eFeatureGeomType) < 4)
+                {
+                    mnCounts[(OGRwkbGeometryType)(eFeatureGeomType + 3)] += 1;
+                }
+                else
+                {
+                    mnCounts[eFeatureGeomType] += 1;
+                }
             }
-            return false;
-        }
-
-
-        OGRFeatureDefn *pNewDef = pDef->Clone();
-        pNewDef->SetGeomType( wkbPoint );
-        if (!ExportFormatEx(pSrsDataSet, sPath, sName + wxString(_("_point")), pFilter, oNewSpaFilter, pNewDef, DstSpaRef, papszDataSourceOptions, papszLayerOptions, pTrackCancel))
-        {
-            return false;
-        }
-
-        //export polygons
-        if (sWhereClause.IsEmpty())
-        {
-            oNewSpaFilter.SetWhereClause(wxT("OGR_GEOMETRY='POLYGON'"));
-        }
-        else
-        {
-            oNewSpaFilter.SetWhereClause(sWhereClause + wxT(" AND OGR_GEOMETRY='POLYGON'"));
-        }
-
-        if (pTrackCancel)
-        {
-            pTrackCancel->PutMessage(wxString::Format(_("Get '%s' features"), wxT("POLYGON")), wxNOT_FOUND, enumGISMessageNorm);
-        }
-
-        szBaseName = (char*)CPLFormFilename(sPath, wxString(sName + wxString(_("_polygon"))).mb_str(wxConvUTF8), sExt.mb_str(wxConvUTF8));
-        pObj = wxDynamicCast(GetGxCatalog()->FindGxObjectByPath(wxString(szBaseName, wxConvUTF8)), wxGxObject);
-        if (!OverWriteGxObject(pObj, pTrackCancel))
-        {
-            wxString sErr(_("Overwrite failed"));
-            CPLError(CE_Failure, CPLE_AppDefined, sErr.mb_str(wxConvUTF8));
-            if (pTrackCancel)
+            if (pProgressor)
             {
-                pTrackCancel->PutMessage(sErr, wxNOT_FOUND, enumGISMessageErr);
+                pProgressor->SetValue(nCounter++);
             }
-            return false;
         }
 
 
-        pNewDef = pDef->Clone();
-        pNewDef->SetGeomType(wkbPolygon);
-        if (!ExportFormatEx(pSrsDataSet, sPath, sName + wxString(_("_polygon")), pFilter, oNewSpaFilter, pNewDef, DstSpaRef, papszDataSourceOptions, papszLayerOptions, pTrackCancel))
+        for (std::map<OGRwkbGeometryType, int>::const_iterator IT = mnCounts.begin(); IT != mnCounts.end(); ++IT)
         {
-            return false;
-        }
-
-        //export linestrings
-        if (sWhereClause.IsEmpty())
-        {
-            oNewSpaFilter.SetWhereClause(wxT("OGR_GEOMETRY='LINESTRING'"));
-        }
-        else
-        {
-            oNewSpaFilter.SetWhereClause(sWhereClause + wxT(" AND OGR_GEOMETRY='LINESTRING'"));
-        }
-
-        if (pTrackCancel)
-        {
-            pTrackCancel->PutMessage(wxString::Format(_("Get '%s' features"), wxT("LINESTRING")), wxNOT_FOUND, enumGISMessageNorm);
-        }
-
-        szBaseName = (char*)CPLFormFilename(sPath, wxString(sName + wxString(_("_line"))).mb_str(wxConvUTF8), sExt.mb_str(wxConvUTF8));
-        pObj = wxDynamicCast(GetGxCatalog()->FindGxObjectByPath(wxString(szBaseName, wxConvUTF8)), wxGxObject);
-        if (!OverWriteGxObject(pObj, pTrackCancel))
-        {
-            wxString sErr(_("Overwrite failed"));
-            CPLError(CE_Failure, CPLE_AppDefined, sErr.mb_str(wxConvUTF8));
-            if (pTrackCancel)
+            if (IT->second > 0)
             {
-                pTrackCancel->PutMessage(sErr, wxNOT_FOUND, enumGISMessageErr);
+                wxString sType(OGRGeometryTypeToName(IT->first), wxConvUTF8);
+
+
+                OGRFeatureDefn *pNewDef = pDef->Clone();
+                pNewDef->SetGeomType(IT->first);
+                sType.Replace(" ", "");         
+                //remove ogc_fid field for PG
+                if (nNewSubType == enumVecPostGIS)
+                {
+                    for (size_t i = 0; i < pNewDef->GetFieldCount(); ++i)
+                    {
+                        OGRFieldDefn* pFieldDefn = pNewDef->GetFieldDefn(i);
+                        if (NULL != pFieldDefn)
+                        {
+                            if (wxGISEQUAL(pFieldDefn->GetNameRef(), "ogc_fid"))
+                            {
+                                pNewDef->DeleteFieldDefn(i);
+                                if (pTrackCancel)
+                                {
+                                    pTrackCancel->PutMessage(_("Remove field 'ogc_fid' from input data"), wxNOT_FOUND, enumGISMessageWarning);
+                                }
+
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!ExportFormatEx(pSrsDataSet, sPath, sName + wxT("_") + sType.MakeLower(), pFilter, oNewSpaFilter, pNewDef, DstSpaRef, papszDataSourceOptions, papszLayerOptions, false, IT->first, bToMulti, pTrackCancel))
+                {
+                    return false;
+                }
             }
-            return false;
-        }
-
-        pNewDef = pDef->Clone();
-        pNewDef->SetGeomType(wkbLineString);
-        if (!ExportFormatEx(pSrsDataSet, sPath, sName + wxString(_("_line")), pFilter, oNewSpaFilter, pNewDef, DstSpaRef, papszDataSourceOptions, papszLayerOptions, pTrackCancel))
-        {
-            return false;
-        }
-
-        //export multipoint
-        if (sWhereClause.IsEmpty())
-        {
-            oNewSpaFilter.SetWhereClause(wxT("OGR_GEOMETRY='MULTIPOINT'"));
-        }
-        else
-        {
-            oNewSpaFilter.SetWhereClause(sWhereClause + wxT(" AND OGR_GEOMETRY='MULTIPOINT'"));
-        }
-
-        if (pTrackCancel)
-        {
-            pTrackCancel->PutMessage(wxString::Format(_("Get '%s' features"), wxT("MULTIPOINT")), wxNOT_FOUND, enumGISMessageNorm);
-        }
-
-        szBaseName = (char*)CPLFormFilename(sPath, wxString(sName + wxString(_("_mpoint"))).ToUTF8(), sExt.ToUTF8());
-        pObj = wxDynamicCast(GetGxCatalog()->FindGxObjectByPath(wxString(szBaseName, wxConvUTF8)), wxGxObject);
-        if (!OverWriteGxObject(pObj, pTrackCancel))
-        {
-            wxString sErr(_("Overwrite failed"));
-            CPLError(CE_Failure, CPLE_AppDefined, sErr.mb_str(wxConvUTF8));
-            if (pTrackCancel)
-            {
-                pTrackCancel->PutMessage(sErr, wxNOT_FOUND, enumGISMessageErr);
-            }
-            return false;
-        }
-
-        pNewDef = pDef->Clone();
-        pNewDef->SetGeomType(wkbMultiPoint);
-        if (!ExportFormatEx(pSrsDataSet, sPath, sName + wxString(_("_mpoint")), pFilter, oNewSpaFilter, pNewDef, DstSpaRef, papszDataSourceOptions, papszLayerOptions, pTrackCancel))
-        {
-            return false;
-        }
-
-        //export multilinestring
-        if (sWhereClause.IsEmpty())
-        {
-            oNewSpaFilter.SetWhereClause(wxT("OGR_GEOMETRY='MULTILINESTRING'"));
-        }
-        else
-        {
-            oNewSpaFilter.SetWhereClause(sWhereClause + wxT(" AND OGR_GEOMETRY='MULTILINESTRING'"));
-        }
-
-        if (pTrackCancel)
-        {
-            pTrackCancel->PutMessage(wxString::Format(_("Get '%s' features"), wxT("MULTILINESTRING")), wxNOT_FOUND, enumGISMessageNorm);
-        }
-
-        szBaseName = (char*)CPLFormFilename(sPath, wxString(sName + wxString(_("_mline"))).mb_str(wxConvUTF8), sExt.mb_str(wxConvUTF8));
-        pObj = wxDynamicCast(GetGxCatalog()->FindGxObjectByPath(wxString(szBaseName, wxConvUTF8)), wxGxObject);
-        if (!OverWriteGxObject(pObj, pTrackCancel))
-        {
-            wxString sErr(_("Overwrite failed"));
-            CPLError(CE_Failure, CPLE_AppDefined, sErr.mb_str(wxConvUTF8));
-            if (pTrackCancel)
-            {
-                pTrackCancel->PutMessage(sErr, wxNOT_FOUND, enumGISMessageErr);
-            }
-            return false;
-        }
-
-        pNewDef = pDef->Clone();
-        pNewDef->SetGeomType(wkbMultiLineString);
-        if (!ExportFormatEx(pSrsDataSet, sPath, sName + wxString(_("_mline")), pFilter, oNewSpaFilter, pNewDef, DstSpaRef, papszDataSourceOptions, papszLayerOptions, pTrackCancel))
-        {
-            return false;
-        }
-
-        //export multilinestring
-        if (sWhereClause.IsEmpty())
-        {
-            oNewSpaFilter.SetWhereClause(wxT("OGR_GEOMETRY='MULTIPOLYGON'"));
-        }
-        else
-        {
-            oNewSpaFilter.SetWhereClause(sWhereClause + wxT(" AND OGR_GEOMETRY='MULTIPOLYGON'"));
-        }
-
-        if (pTrackCancel)
-        {
-            pTrackCancel->PutMessage(wxString::Format(_("Get '%s' features"), wxT("MULTIPOLYGON")), wxNOT_FOUND, enumGISMessageNorm);
-        }
-
-        szBaseName = (char*)CPLFormFilename(sPath, wxString(sName + wxString(_("_mpolygon"))).mb_str(wxConvUTF8), sExt.mb_str(wxConvUTF8));
-        pObj = wxDynamicCast(GetGxCatalog()->FindGxObjectByPath(wxString(szBaseName, wxConvUTF8)), wxGxObject);
-        if (!OverWriteGxObject(pObj, pTrackCancel))
-        {
-            wxString sErr(_("Overwrite failed"));
-            CPLError(CE_Failure, CPLE_AppDefined, sErr.mb_str(wxConvUTF8));
-            if (pTrackCancel)
-            {
-                pTrackCancel->PutMessage(sErr, wxNOT_FOUND, enumGISMessageErr);
-            }
-            return false;
-        }
-
-        pNewDef = pDef->Clone();
-        pNewDef->SetGeomType(wkbMultiPolygon);
-        if (!ExportFormatEx(pSrsDataSet, sPath, sName + wxString(_("_mpolygon")), pFilter, oNewSpaFilter, pNewDef, DstSpaRef, papszDataSourceOptions, papszLayerOptions, pTrackCancel))
-        {
-            return false;
         }
     }
     else //not multigeom
     {
-        if (pTrackCancel)
-        {
-            pTrackCancel->PutMessage(_("Get features..."), wxNOT_FOUND, enumGISMessageNorm);
-        }
-
-        CPLString szBaseName = (char*)CPLFormFilename(sPath, sName.mb_str(wxConvUTF8), sExt.mb_str(wxConvUTF8));
-        wxGxObject* pObj = wxDynamicCast(GetGxCatalog()->FindGxObjectByPath(wxString(szBaseName, wxConvUTF8)), wxGxObject);
-        if (!OverWriteGxObject(pObj, pTrackCancel))
-        {
-            wxString sErr(_("Overwrite failed"));
-            CPLError(CE_Failure, CPLE_AppDefined, sErr.mb_str(wxConvUTF8));
-            if (pTrackCancel)
-            {
-                pTrackCancel->PutMessage(sErr, wxNOT_FOUND, enumGISMessageErr);
-            }
-            return false;
-        }
-
         //check if data have multi types
         bool bIsMulti = false;
-        OGRwkbGeometryType eCheckType;
-        OGRFeatureDefn *pNewDef = pDef;
+        OGRFeatureDefn *pNewDef = pDef->Clone();
 
 
-        if (eGeomType > 1 && eGeomType < 4 && nNewSubType == enumVecPostGIS)
+        if (wkbFlatten(eGeomType) > 1 && wkbFlatten(eGeomType) < 4 && nNewSubType == enumVecPostGIS)
         {
             //check to multi
             if (pTrackCancel)
@@ -663,7 +875,7 @@ bool ExportFormat(wxGISFeatureDataset* const pSrsDataSet, const CPLString &sPath
                 pTrackCancel->PutMessage(wxString::Format(_("Check if features geometry is the type of %s"), OGRGeometryTypeToName(pNewDef->GetGeomType())), wxNOT_FOUND, enumGISMessageInfo);
             }
 
-            bool bToMulti = false;
+            bool bToMultiInPG = false;
 
             wxArrayString saIgnoredFields = pSrsDataSet->GetFieldNames();
             saIgnoredFields.Add(wxT("OGR_STYLE"));
@@ -680,19 +892,18 @@ bool ExportFormat(wxGISFeatureDataset* const pSrsDataSet, const CPLString &sPath
                 {
                     if (Geom.GetType() > eGeomType)
                     {
-                        bToMulti = true;
+                        bToMultiInPG = true;
                         break;
                     }
                 }
             }
 
-            if (bToMulti)
+            if (bToMultiInPG)
             {
-                pNewDef = pDef->Clone();
                 pNewDef->SetGeomType((OGRwkbGeometryType)(eGeomType + 3));//set multi
                 if (pTrackCancel)
                 {
-                    pTrackCancel->PutMessage(wxString::Format(_("Force geometry filed to %s"), OGRGeometryTypeToName(pNewDef->GetGeomType())), wxNOT_FOUND, enumGISMessageInfo);
+                    pTrackCancel->PutMessage(wxString::Format(_("Force geometry field to %s"), OGRGeometryTypeToName(pNewDef->GetGeomType())), wxNOT_FOUND, enumGISMessageInfo);
                 }
             }
             saIgnoredFields.Clear();
@@ -705,8 +916,28 @@ bool ExportFormat(wxGISFeatureDataset* const pSrsDataSet, const CPLString &sPath
         wxGISConfigOptionReset reset_copy("PG_USE_COPY", "YES", CPLGetConfigOption("PG_USE_COPY", "YES"));
         //}
 
+        if (nNewSubType == enumVecPostGIS)
+        {
+            for (size_t i = 0; i < pNewDef->GetFieldCount(); ++i)
+            {
+                OGRFieldDefn* pFieldDefn = pNewDef->GetFieldDefn(i);
+                if (NULL != pFieldDefn)
+                {
+                    if (wxGISEQUAL(pFieldDefn->GetNameRef(), "ogc_fid"))
+                    {
+                        pNewDef->DeleteFieldDefn(i);
+                        if (pTrackCancel)
+                        {
+                            pTrackCancel->PutMessage(_("Remove field 'ogc_fid' from input data"), wxNOT_FOUND, enumGISMessageWarning);
+                        }
 
-        if (!ExportFormatEx(pSrsDataSet, sPath, sName, pFilter, SpaFilter, pNewDef, DstSpaRef, papszDataSourceOptions, papszLayerOptions, pTrackCancel))
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!ExportFormatEx(pSrsDataSet, sPath, sName, pFilter, SpaFilter, pNewDef, DstSpaRef, papszDataSourceOptions, papszLayerOptions, true, wkbUnknown, bToMulti, pTrackCancel))
         {
             return false;
         }
@@ -1466,7 +1697,7 @@ wxGISDataset* CreateDataset(const CPLString &sPath, const wxString &sName, wxGxO
     CPLString szFullPath = sPath;
     if (!sName.IsEmpty())
     {
-        szFullPath  = CPLFormFilename(sPath, sName.mb_str(wxConvUTF8), pFilter->GetExt().mb_str(wxConvUTF8));
+        szFullPath = CPLFormFilename(sPath, sName.ToUTF8(), pFilter->GetExt().ToUTF8());
     }
 
     OGRDataSource *poDS = NULL;
@@ -1579,7 +1810,8 @@ wxGISDataset* CreateDataset(const CPLString &sPath, const wxString &sName, wxGxO
 #endif
     
     //TODO: test if vertical srs can storing in output format
-    oSpatialRef->StripVertical();
+    if (oSpatialRef.IsOk())
+        oSpatialRef->StripVertical();
     OGRLayer *poLayerDest = poDS->CreateLayer(szName, oSpatialRef, poFields->GetGeomType(), papszLayerOptions);
     if(poLayerDest == NULL)
     {

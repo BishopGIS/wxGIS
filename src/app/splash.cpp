@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -105,7 +105,8 @@ int wxGISSplashScreen::FilterEvent(wxEvent& event)
 
     wxFont font_n(16, wxFONTFAMILY_DEFAULT , wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false);
     dc.SetFont(font_n);
-    wxString sName = wxString::Format(wxT("%s"), m_pApp->GetUserAppNameShort().c_str());
+    //wxString sName = wxString::Format(wxT("%s"), m_pApp->GetUserAppNameShort().c_str());
+    wxString sName = wxString::Format(wxT("%s"), m_pApp->GetAppDisplayNameShort().c_str());
     dc.GetTextExtent(sName, &width, &height);
     dc.DrawText(sName, wxPoint(nHCenter  - width / 2, nVCenter - height / 2 - 5));
 

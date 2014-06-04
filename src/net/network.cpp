@@ -3,11 +3,11 @@
  * Purpose:  network classes.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2010,2012,2013 Bishop
+*   Copyright (C) 2010,2012-2014 Bishop
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -41,9 +41,9 @@ void *wxNetReaderThread::Entry()
 	while(!TestDestroy())
 	{
 		//WaitForRead
-        wxCriticalSectionLocker lock(m_CritSect);
-        if (m_pNetConnection == NULL)
-            break;
+        //wxCriticalSectionLocker lock(m_CritSect);
+        //if (m_pNetConnection == NULL)
+        //    break;
         if (!m_pNetConnection->ProcessInputNetMessage())
         {
             wxThread::Sleep(SLEEP);
@@ -55,13 +55,9 @@ void *wxNetReaderThread::Entry()
 
 void wxNetReaderThread::OnExit()
 {
-}
-
-void wxNetReaderThread::ClearConnection()
-{
-    wxCriticalSectionLocker lock(m_CritSect);
     m_pNetConnection = NULL;
 }
+
 
 // ----------------------------------------------------------------------------
 // wxNetTCPWriter
@@ -79,9 +75,9 @@ void *wxNetWriterThread::Entry()
 	while(!TestDestroy())
 	{
         //WaitForWrite
-        wxCriticalSectionLocker lock(m_CritSect);
-        if (m_pNetConnection == NULL)
-            break;
+        //wxCriticalSectionLocker lock(m_CritSect);
+        //if (m_pNetConnection == NULL)
+        //    break;
         if (!m_pNetConnection->ProcessOutputNetMessage())
         {
             wxThread::Sleep(SLEEP);
@@ -93,11 +89,6 @@ void *wxNetWriterThread::Entry()
 
 void wxNetWriterThread::OnExit()
 {
-}
-
-void wxNetWriterThread::ClearConnection()
-{
-    wxCriticalSectionLocker lock(m_CritSect);
     m_pNetConnection = NULL;
 }
 
@@ -157,6 +148,7 @@ wxNetMessage INetConnection::SendNetMessageSync(wxNetMessage & msg)
 
         wxTheApp->Yield(true);
         sp = wxDateTime::Now() - dtNow;
+        wxMilliSleep(WAITFOR);
     };
 
     wxCriticalSectionLocker lock(m_msgCS);
@@ -166,21 +158,39 @@ wxNetMessage INetConnection::SendNetMessageSync(wxNetMessage & msg)
 
 bool INetConnection::CreateAndRunThreads(void)
 {
-	m_pOutThread = new wxNetWriterThread(this);
-	if(!CreateAndRunThread(m_pOutThread, wxT("wxNetWriterThread"), wxT("NetWriterThread")))
-		return false;	
+    if (NULL == m_pOutThread)
+    {
+        m_pOutThread = new wxNetWriterThread(this);
+        if (!CreateAndRunThread(m_pOutThread, wxT("wxNetWriterThread"), wxT("NetWriterThread")))
+            return false;
+    }
 
     wxMilliSleep(SLEEP);
 
-    m_pInThread = new wxNetReaderThread(this);
-	if(!CreateAndRunThread(m_pInThread, wxT("wxNetReaderThread"), wxT("NetReaderThread")))
-		return false;
+    if (NULL == m_pInThread)
+    {
+        m_pInThread = new wxNetReaderThread(this);
+        if (!CreateAndRunThread(m_pInThread, wxT("wxNetReaderThread"), wxT("NetReaderThread")))
+            return false;
+    }
 
     return true;
 }
 
 void INetConnection::DestroyThreads(void)
 {
+    if (NULL != m_pInThread && m_pInThread->IsRunning())
+    {
+        m_pInThread->Delete();
+        m_pInThread = NULL;
+    }
+
+    if (NULL != m_pOutThread && m_pOutThread->IsRunning())
+    {
+        m_pOutThread->Delete();
+        m_pOutThread = NULL;
+    }
+       
     if(m_pSock)
     {
         if( m_pSock->Destroy() )
@@ -189,34 +199,6 @@ void INetConnection::DestroyThreads(void)
             wxLogDebug(wxT("Socket not destroyed!!!"));
     }
 
-    if (m_pInThread)
-    {
-        if(m_pInThread->IsRunning())
-        {
-            m_pInThread->ClearConnection();
-            while(m_pInThread->Delete() != wxTHREAD_NO_ERROR)
-            {
-                //wxThread::This()->Sleep(SLEEP);
-                wxMilliSleep(SLEEP);
-            }
-        }
-        m_pInThread = NULL;
-    }
-
-    if (m_pOutThread)
-    {
-        if(m_pOutThread->IsRunning())
-        {
-            m_pOutThread->ClearConnection();
-            while(m_pOutThread->Delete() != wxTHREAD_NO_ERROR)
-            {
-                //wxThread::This()->Sleep(SLEEP);
-                wxMilliSleep(SLEEP);
-            }
-        }
-        m_pOutThread = NULL;
-    }
-       
     //wxCriticalSectionLocker lock(m_dataCS);
     //cleare quere
     while(m_aoMessages.size() > 0)
@@ -241,17 +223,21 @@ bool INetConnection::ProcessOutputNetMessage(void)
         return false;
     }
 
-    if(m_pSock->WaitForWrite(WAITFOR))
+    if(m_pSock->WaitForWrite(0, WAITFOR))
     {
-        if(!m_pSock)
-            return true;
         //m_pSock->SetTimeout(SLEEP);
         //m_pSock->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
         wxNetMessage msgout = m_aoMessages.top();
         wxJSONWriter writer( wxJSONWRITER_NONE ); 
-        writer.SetDoubleFmtString("%.10f");
 
 #ifdef USE_STREAMS
+#ifdef _DEBUG
+        //wxString sOut;
+        //writer.Write(msgout.GetInternalValue(), sOut);
+        //wxLogMessage(sOut);
+#endif //_DEBUG
+
+
         wxSocketOutputStream out(*m_pSock);
         writer.Write( msgout.GetInternalValue(), out );
         //write EOF
@@ -294,17 +280,22 @@ bool INetConnection::ProcessInputNetMessage(void)
         return false;
     }
 
-    if(m_pSock->WaitForRead(WAITFOR))
+    if(m_pSock->WaitForRead(0, WAITFOR))
     {
-        if(!m_pSock)
-            return true;
-
         wxJSONValue  value;
         wxJSONReader reader;
 
 #ifdef USE_STREAMS
         wxSocketInputStream in(*m_pSock);
         int numErrors = reader.Parse( in, &value );
+
+#ifdef _DEBUG
+        //wxString sOut;
+        //wxJSONWriter writer(wxJSONWRITER_NONE);
+        //writer.Write(value, sOut);
+        //wxLogMessage(sOut);
+#endif // _DEBUG
+
 #else
         RtlZeroMemory(m_Buffer, sizeof(m_Buffer));
         wxUint32 nRead(0);
@@ -320,16 +311,26 @@ bool INetConnection::ProcessInputNetMessage(void)
 
         int numErrors = reader.Parse( sIn, &value );
 #endif
+
+
         if ( numErrors > 0 )  
         {
-            wxLogDebug(_("Invalid input message"));
+            const wxArrayString& errors = reader.GetErrors();
+            wxString sErrMsg(_("Invalid input message"));
+            for (size_t i = 0; i < errors.GetCount(); ++i)
+            {
+                wxString sErr = errors[i];
+                sErrMsg.Append(wxT("\n"));
+                sErrMsg.Append(wxString::Format(wxT("%d. %s"), i, sErr.c_str()));
+            }
+            wxLogVerbose(sErrMsg);
             return false;
         }
 
         wxNetMessage msg(value);
         if(!msg.IsOk())
         {
-            wxLogDebug(_("Invalid input message"));
+            wxLogVerbose(_("Invalid input message"));
             return false;
         }
 
@@ -383,7 +384,6 @@ bool SendUDP(IPaddress addr, wxNetMessage & msg, bool broadcast)
     }
 
     wxJSONWriter writer;
-    writer.SetDoubleFmtString("%.10f");
     wxString sVal;
     writer.Write(val, sVal);
     int nSize = sVal.Len() * sizeof(sVal.GetChar(0));

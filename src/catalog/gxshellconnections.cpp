@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -154,7 +154,7 @@ void wxGxShellConnections::StartWatcher(void)
 
 void wxGxShellConnections::OnFileSystemEvent(wxFileSystemWatcherEvent& event)
 {
-    wxLogDebug(wxT("*** %s ***"), event.ToString().c_str());
+    //wxLogDebug(wxT("*** %s ***"), event.ToString().c_str());
     switch(event.GetChangeType())
     {
     case wxFSW_EVENT_CREATE:
@@ -230,7 +230,7 @@ void wxGxShellConnections::LoadChildren(void)
 }
 
 #ifdef __WXGTK__
-void wxGxDBConnections::OnObjectAdded(wxGxCatalogEvent& event)
+void wxGxShellConnections::OnObjectAdded(wxGxCatalogEvent& event)
 {
     wxGxObject* pGxObject = m_pCatalog->GetRegisterObject(event.GetObjectID());
 	if(!pGxObject)

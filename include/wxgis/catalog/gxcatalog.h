@@ -3,11 +3,11 @@
  * Purpose:  wxGxCatalog class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009-2013 Bishop
+*   Copyright (C) 2009-2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -22,11 +22,15 @@
 
 #include "wxgis/catalog/gxobject.h"
 #include "wxgis/catalog/gxobjectfactory.h"
+#include "wxgis/core/pointer.h"
 
 #include <wx/xml/xml.h>
 
-/** \class wxGxCatalog gxcatalog.h
-    \brief The GxCatalog class.
+/** @class wxGxCatalog
+
+    The main catalog class. Catalog stores and provides access to the tree of geodata objects (GxObjects)
+
+    @library{catalog}
 */
 class WXDLLIMPEXP_GIS_CLT wxGxCatalog : 
     public wxGxCatalogBase,

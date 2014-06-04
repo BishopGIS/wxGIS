@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -133,4 +133,24 @@ void wxGISColor::SetFromString(const wxString &sColorTxt)
     int nB = wxAtoi(saColors[2]);
     int nA = wxAtoi(saColors[3]);
     Set(nR, nG, nB, nA);
+}
+
+void wxGISColor::SetAlpha(ChannelType alpha)
+{
+    Set(Red(), Green(), Blue(), alpha);
+}
+
+void wxGISColor::SetRed(ChannelType red)
+{
+    Set(red, Green(), Blue(), Alpha());
+}
+
+void wxGISColor::SetGreen(ChannelType green)
+{
+    Set(Red(), green, Blue(), Alpha());
+}
+
+void wxGISColor::SetBlue(ChannelType blue)
+{
+    Set(Red(), Green(), blue, Alpha());
 }

@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -74,6 +74,7 @@ public:
     void SetValue(wxJSONValue val);
     wxJSONValue GetValue(void) const;
     wxJSONValue GetInternalValue() const;
+    wxNetMessage Clone() const;
 protected:
     virtual wxObjectRefData *CreateRefData() const;
     virtual wxObjectRefData *CloneRefData(const wxObjectRefData *data) const;
@@ -135,6 +136,7 @@ public:
     void SetFrom(const wxString& from);
 
 public:
+    wxArrayString  m_to;               //Recipients
     wxString       m_from;             //The From: email address (optional)
     wxString       m_subject;          //The Subject of the message
     wxString       m_body;             //The Body of the message

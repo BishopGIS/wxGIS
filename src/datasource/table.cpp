@@ -3,11 +3,11 @@
  * Purpose:  Table class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2010-2014 Bishop
+*   Copyright (C) 2010-2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -39,6 +39,7 @@ wxGISTable::wxGISTable(const CPLString &sPath, int nSubType, OGRLayer* poLayer, 
     m_nSubType = nSubType;
 
     m_Encoding = wxLocale::GetSystemEncoding();
+    m_bRecodeToSystem = false;
 
     poLayer == NULL ? m_bIsOpened = false : m_bIsOpened = true;
 
@@ -46,6 +47,7 @@ wxGISTable::wxGISTable(const CPLString &sPath, int nSubType, OGRLayer* poLayer, 
     m_bIsCached = false;
 
 	m_bHasFID = false;
+    m_bHasFilter = false;
     m_nCurrentFID = wxNOT_FOUND;
     m_nFeatureCount = wxNOT_FOUND;
 
@@ -88,6 +90,18 @@ bool wxGISTable::Open(int iLayer, int bUpdate, bool bCache, ITrackCancel* const 
 	if(m_bIsOpened)
 		return true;
 
+    if (m_nSubType == enumTableDBF)
+    {
+        const char* szCPGPath = CPLResetExtension(m_sPath, "cpg");
+        if (!CPLCheckForFile((char*)szCPGPath, NULL))//no cpg file
+        {
+            //set system encoding
+            wxString sEnc = wxLocale::GetSystemEncodingName();
+            const char* sz_enc = sEnc.mb_str();
+            CPLSetConfigOption("SHAPE_ENCODING", sz_enc);
+        }
+    }
+
 	wxCriticalSectionLocker locker(m_CritSect);
 
 	m_bIsReadOnly = bUpdate == FALSE;
@@ -99,8 +113,18 @@ bool wxGISTable::Open(int iLayer, int bUpdate, bool bCache, ITrackCancel* const 
 
 		m_poDS = OGRSFDriverRegistrar::Open( m_sPath, bUpdate );
 		//bug in FindFileInZip() [gdal-root\port\cpl_vsil_gzip.cpp]
-		if( m_poDS == NULL )
-			m_poDS = OGRSFDriverRegistrar::Open( FixPathSeparator(m_sPath), bUpdate );
+        if (m_poDS == NULL)
+        {
+            if (m_bIsReadOnly)
+            {
+			    m_poDS = OGRSFDriverRegistrar::Open( FixPathSeparator(m_sPath), bUpdate );
+            }
+            else
+            {
+		        m_poDS = OGRSFDriverRegistrar::Open( m_sPath, FALSE );
+                m_bIsReadOnly = true;
+            }
+        }
 
 		if( m_poDS == NULL )
 		{
@@ -126,15 +150,17 @@ bool wxGISTable::Open(int iLayer, int bUpdate, bool bCache, ITrackCancel* const 
 
 	m_bIsOpened = true;
     
-	if(bCache)
+    if (bCache)
+    {
 		Cache(pTrackCancel);
+    }
 
 	return true;
 }
 
 size_t wxGISTable::GetSubsetsCount(void) const
 {
-    if(m_poDS)
+    if (m_poDS && m_nType == enumGISContainer)
         return  m_poDS->GetLayerCount();
     return 0;
 }
@@ -160,7 +186,7 @@ wxGISDataset* wxGISTable::GetSubset(const wxString & sSubsetName)
 {
     if(m_poDS)
     {
-        CPLString szSubsetName(sSubsetName.mb_str(wxConvUTF8));
+        CPLString szSubsetName(sSubsetName.ToUTF8());
         OGRLayer* poLayer = m_poDS->GetLayerByName(szSubsetName);
         if(poLayer)
         {
@@ -244,7 +270,7 @@ void wxGISTable::SetInternalValues()
 
     if(m_bOLCFastFeatureCount)
     {
-        m_nFeatureCount = m_poLayer->GetFeatureCount(0);
+        m_nFeatureCount = m_poLayer->GetFeatureCount(FALSE);
     }
 
     m_bHasFID = !GetFIDColumn().IsEmpty();
@@ -285,6 +311,8 @@ void wxGISTable::Close(void)
 	    m_Encoding = wxLocale::GetSystemEncoding();
 
 	    m_bHasFID = false;
+        m_bHasFilter = false;
+
         m_nFeatureCount = wxNOT_FOUND;
 
         m_bOLCFastFeatureCount = false;
@@ -300,19 +328,19 @@ void wxGISTable::Close(void)
 size_t wxGISTable::GetFeatureCount(bool bForce, ITrackCancel* const pTrackCancel)
 {
     wxCriticalSectionLocker locker(m_CritSect);
-	if(m_nFeatureCount != wxNOT_FOUND)
+    if (!bForce && m_nFeatureCount != wxNOT_FOUND)
 		return m_nFeatureCount;
     if(	m_poLayer )
     {
         if(bForce)
-            m_nFeatureCount = m_poLayer->GetFeatureCount(1);
+            m_nFeatureCount = m_poLayer->GetFeatureCount(TRUE);
         else if(m_bOLCFastFeatureCount)
-            m_nFeatureCount = m_poLayer->GetFeatureCount(0);
+            m_nFeatureCount = m_poLayer->GetFeatureCount(FALSE);
         else 
         {
-		    m_nFeatureCount = m_poLayer->GetFeatureCount(0);
+            m_nFeatureCount = m_poLayer->GetFeatureCount(FALSE);
             if(m_nFeatureCount == -1)
-                m_nFeatureCount = m_poLayer->GetFeatureCount(1);
+                m_nFeatureCount = m_poLayer->GetFeatureCount(TRUE);
             if(m_nFeatureCount == -1)
                 return 0;
         }
@@ -322,12 +350,32 @@ size_t wxGISTable::GetFeatureCount(bool bForce, ITrackCancel* const pTrackCancel
     return 0;
 }
 
-bool wxGISTable::CanDeleteFeature(void)
+bool wxGISTable::CanDeleteFeature(void) const
 {
     if(!IsOpened())
         return false;
 	return m_nSubType != enumTableQueryResult && m_poLayer && m_poLayer->TestCapability(OLCDeleteFeature);
 }
+
+bool wxGISTable::CanDeleteField(void) const
+{
+    if(!IsOpened())
+        return false;
+    return m_nSubType != enumTableQueryResult && m_poLayer && m_poLayer->TestCapability(OLCDeleteField);
+}
+
+OGRErr wxGISTable::DeleteField(int nIndex)
+{
+    if (!CanDeleteField())
+		return OGRERR_UNSUPPORTED_OPERATION;
+    OGRErr eErr = m_poLayer->DeleteField(nIndex);
+
+    //PostEvent(new wxFeatureDSEvent(wxDS_FEATURE_DELETED, nIndex)); TODO:
+
+    return eErr;
+
+}
+
 
 OGRErr wxGISTable::DeleteFeature(long nFID)
 {
@@ -377,7 +425,7 @@ wxGISFeature wxGISTable::CreateFeature(void)
         return wxGISFeature();
     }
 
-    wxGISFeature Feature( poFeature, m_Encoding );
+    wxGISFeature Feature(poFeature, m_Encoding, m_bRecodeToSystem);
 	return Feature;
 }
 
@@ -427,7 +475,7 @@ wxGISFeature wxGISTable::GetFeatureByID(long nFID)
 		OGRFeature* pFeature = m_poLayer->GetFeature(nFID);
 		if(pFeature)
 		{
-            return wxGISFeature(pFeature, m_Encoding);
+            return wxGISFeature(pFeature, m_Encoding, m_bRecodeToSystem);
 		}
 	}
 	return wxGISFeature();
@@ -474,7 +522,7 @@ wxGISFeature wxGISTable::Next(void)
     {
         pFeature->SetFID(m_nCurrentFID++);
     }
-    return wxGISFeature(pFeature, m_Encoding);
+    return wxGISFeature(pFeature, m_Encoding, m_bRecodeToSystem);
 }
 
 wxFeatureCursor wxGISTable::Search(const wxGISQueryFilter &QFilter, bool bOnlyFirst, ITrackCancel* const pTrackCancel)
@@ -531,7 +579,7 @@ wxFeatureCursor wxGISTable::Search(const wxGISQueryFilter &QFilter, bool bOnlyFi
             {
                pProgressor->SetValue(nCounter++);
             }
-			oOutCursor.Add(wxGISFeature(pFeature, m_Encoding));
+            oOutCursor.Add(wxGISFeature(pFeature, m_Encoding, m_bRecodeToSystem));
 			if(bOnlyFirst)
 				break;
 		}
@@ -548,7 +596,7 @@ wxFeatureCursor wxGISTable::Search(const wxGISQueryFilter &QFilter, bool bOnlyFi
 		//	sFilter.Prepend(wxT("(") + m_sCurrentFilter + wxT(") AND ("));
 		//	sFilter.Append(wxT(")"));
 		//}
-        eErr = m_poLayer->SetAttributeFilter(sFilter.mb_str());
+        eErr = m_poLayer->SetAttributeFilter(sFilter.ToUTF8());
 		if(eErr != OGRERR_NONE)
 			return oOutCursor;
 		//create and fill cursor
@@ -576,7 +624,7 @@ wxFeatureCursor wxGISTable::Search(const wxGISQueryFilter &QFilter, bool bOnlyFi
                 pProgressor->SetValue(nCounter++);
             }
 
-			oOutCursor.Add(wxGISFeature(poFeature, m_Encoding));
+            oOutCursor.Add(wxGISFeature(poFeature, m_Encoding, m_bRecodeToSystem));
 			if(bOnlyFirst)
 				break;
 		}
@@ -652,13 +700,15 @@ OGRErr wxGISTable::SetFilter(const wxGISQueryFilter &QFilter)
         eErr = m_poLayer->SetAttributeFilter(NULL);
         m_nFeatureCount = wxNOT_FOUND;
         GetFeatureCount(true);
+        m_bHasFilter = false;
         return eErr;
     }
     else
 	{
-        eErr = m_poLayer->SetAttributeFilter(QFilter.GetWhereClause().mb_str(wxConvUTF8));
+        eErr = m_poLayer->SetAttributeFilter(QFilter.GetWhereClause().ToUTF8());
         m_nFeatureCount = wxNOT_FOUND;
         GetFeatureCount(true);
+        m_bHasFilter = true;
         return eErr;
 	}
 }
@@ -674,7 +724,7 @@ OGRErr wxGISTable::SetIgnoredFields(const wxArrayString &saIgnoredFields)
 
         char **papszIgnoredFields = NULL;
         for(size_t i = 0; i < saIgnoredFields.GetCount(); ++i)
-            papszIgnoredFields = CSLAddString( papszIgnoredFields, saIgnoredFields[i].mb_str(wxConvUTF8) );
+            papszIgnoredFields = CSLAddString( papszIgnoredFields, saIgnoredFields[i].ToUTF8() );
 
         OGRErr eErr = m_poLayer->SetIgnoredFields((const char**)papszIgnoredFields);
         CSLDestroy( papszIgnoredFields );
@@ -746,6 +796,12 @@ wxFontEncoding wxGISTable::GetEncoding(void) const
 
 void wxGISTable::SetEncoding(const wxFontEncoding &oEncoding)
 {
+    if (m_nSubType == enumTableDBF)
+    {
+        wxString sEnc = wxLocale::GetSystemEncodingName();
+        const char* sz_enc = sEnc.mb_str();
+        m_bRecodeToSystem = wxGISEQUAL(CPLGetConfigOption("SHAPE_ENCODING", sz_enc), sz_enc);
+    }
     m_Encoding = oEncoding;
 }
 
@@ -824,7 +880,7 @@ void wxGISTableCached::Cache(ITrackCancel* const pTrackCancel)
             nFID = poFeature->GetFID();
 
         //store features in array for speed
-		m_omFeatures[nFID] = wxGISFeature(poFeature, m_Encoding);
+        m_omFeatures[nFID] = wxGISFeature(poFeature, m_Encoding, m_bRecodeToSystem);
 		m_nCurrentFID++;
 
 		if(pTrackCancel && !pTrackCancel->Continue())
@@ -888,21 +944,23 @@ wxGISFeature wxGISTableCached::GetFeature(long nIndex)
 size_t wxGISTableCached::GetFeatureCount(bool bForce, ITrackCancel* const pTrackCancel)
 {
     wxCriticalSectionLocker locker(m_CritSect);
-	if(m_nFeatureCount != wxNOT_FOUND)
+    if (!bForce && m_nFeatureCount != wxNOT_FOUND)
 		return m_nFeatureCount;
     if(	m_poLayer )
     {
         if(bForce)
         {
+            m_bIsCached = false;
             Cache(pTrackCancel);
         }
         else if(m_bOLCFastFeatureCount)
-            m_nFeatureCount = m_poLayer->GetFeatureCount(0);
+            m_nFeatureCount = m_poLayer->GetFeatureCount(FALSE);
         else 
         {
-        	m_nFeatureCount = m_poLayer->GetFeatureCount(0);
+        	m_nFeatureCount = m_poLayer->GetFeatureCount(FALSE);
             if(m_nFeatureCount == wxNOT_FOUND)
             {
+                m_bIsCached = false;
                 Cache(pTrackCancel);
             }
             if(m_nFeatureCount == wxNOT_FOUND)
@@ -968,7 +1026,7 @@ wxGISFeature wxGISTableCached::GetFeatureByID(long nFID)
 		    OGRFeature* pFeature = m_poLayer->GetFeature(nFID);
 		    if(pFeature)
 		    {
-                ret = wxGISFeature(pFeature, m_Encoding);
+                ret = wxGISFeature(pFeature, m_Encoding, m_bRecodeToSystem);
 			    m_omFeatures[nFID] = ret;
 		    }
 	    }
@@ -1045,7 +1103,7 @@ wxFeatureCursor wxGISTableCached::Search(const wxGISQueryFilter &QFilter, bool b
         //	sFilter.Prepend(wxT("(") + m_sCurrentFilter + wxT(") AND ("));
         //	sFilter.Append(wxT(")"));
         //}
-        eErr = m_poLayer->SetAttributeFilter(sFilter.mb_str());
+        eErr = m_poLayer->SetAttributeFilter(sFilter.ToUTF8());
         if (eErr != OGRERR_NONE)
             return oOutCursor;
         //create and fill cursor
@@ -1073,7 +1131,7 @@ wxFeatureCursor wxGISTableCached::Search(const wxGISQueryFilter &QFilter, bool b
                 pProgressor->SetValue(nCounter++);
             }
 
-            oOutCursor.Add(wxGISFeature(poFeature, m_Encoding));
+            oOutCursor.Add(wxGISFeature(poFeature, m_Encoding, m_bRecodeToSystem));
             if (bOnlyFirst)
                 break;
         }
@@ -1127,7 +1185,7 @@ void wxGISTableQuery::Cache(ITrackCancel* const pTrackCancel)
             nFID = poFeature->GetFID();
 
         //store features in array for speed
-        m_omFeatures[nFID] = wxGISFeature(poFeature, m_Encoding);
+        m_omFeatures[nFID] = wxGISFeature(poFeature, m_Encoding, m_bRecodeToSystem);
         m_nCurrentFID++;
 
     }
@@ -1145,4 +1203,10 @@ void wxGISTableQuery::Cache(ITrackCancel* const pTrackCancel)
             OGRDataSource::DestroyDataSource(m_poDS);
         m_poDS = NULL;
     }
+}
+
+size_t wxGISTableQuery::GetFeatureCount(bool bForce, ITrackCancel* const pTrackCancel)
+{
+    wxCriticalSectionLocker locker(m_CritSect);
+    return m_nFeatureCount;
 }

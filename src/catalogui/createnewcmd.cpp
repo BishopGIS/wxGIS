@@ -3,11 +3,11 @@
  * Purpose:  Catalog Create New Commands class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2011-2012 Bishop
-*
+ *   Copyright (C) 2011-2012,2014 Dmitry Baryshnikov
+ *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -21,7 +21,7 @@
 #include "wxgis/catalogui/createnewcmd.h"
 
 #include "wxgis/catalogui/gxcatalogui.h"
-#include "wxgis/catalogui/remoteconndlg.h"
+#include "wxgis/catalogui/remoteconndlgs.h"
 #include "wxgis/datasource/sysop.h"
 #include "wxgis/catalogui/gxselection.h"
 #include "wxgis/catalogui/gxdbconnectionsui.h"

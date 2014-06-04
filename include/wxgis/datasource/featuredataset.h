@@ -3,11 +3,11 @@
  * Purpose:  FeatureDataset class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009-2013 Bishop
+*   Copyright (C) 2009-2014 Bishop
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -38,13 +38,15 @@ public:
 //wxGISTable
     virtual const wxGISSpatialReference GetSpatialReference(void);
     virtual void Close(void);
-	virtual bool Open(int iLayer = 0, int bUpdate = 0, bool bCache = true, ITrackCancel* const pTrackCancel = NULL);
+	virtual bool Open(int iLayer = 0, int bUpdate = TRUE, bool bCache = true, ITrackCancel* const pTrackCancel = NULL);
     virtual wxGISDataset* GetSubset(size_t nIndex);	
     virtual wxGISDataset* GetSubset(const wxString & sSubsetName); 
     virtual bool IsCached(void) const; 
 	virtual bool IsCaching(void) const;    
 	virtual void Cache(ITrackCancel* const pTrackCancel = NULL);
     virtual void StopCaching(void);
+    virtual void SetEncoding(const wxFontEncoding &oEncoding);
+    virtual char **GetFileList();
     //editing
 	virtual OGRErr DeleteFeature(long nFID);    
     virtual OGRErr StoreFeature(wxGISFeature &Feature);
@@ -56,8 +58,6 @@ public:
     virtual OGRErr SetFilter(const wxGISSpatialFilter &SpaFilter = wxGISNullSpatialFilter);
     virtual wxFeatureCursor Search(const wxGISSpatialFilter &SpaFilter, bool bOnlyFirst = false, ITrackCancel* const pTrackCancel = NULL);
  	virtual wxGISSpatialTreeCursor SearchGeometry(const OGREnvelope &Env);
-	//wxGISTable
-    virtual char **GetFileList();
 protected:
     virtual void SetInternalValues(void);
 protected:	
@@ -86,7 +86,8 @@ public:
     virtual wxGISDataset* GetSubset(size_t nIndex);	
     virtual wxGISDataset* GetSubset(const wxString & sSubsetName); 
 	virtual void Cache(ITrackCancel* const pTrackCancel = NULL);
-//wxGISFeatureDataset
+    virtual void SetEncoding(const wxFontEncoding &oEncoding);
+    //wxGISFeatureDataset
 	virtual OGREnvelope GetEnvelope(void);
     /*
     virtual OGRErr SetFilter(wxGISQueryFilter* pQFilter);

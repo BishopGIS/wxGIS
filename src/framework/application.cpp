@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -94,6 +94,74 @@ void wxGISApplication::OnCommand(wxCommandEvent& event)
 	}
 }
 
+void wxGISApplication::Command(wxGISCommand* pCmd)
+{
+    if (NULL == pCmd)
+        return;
+    ITool* pTool = dynamic_cast<ITool*>(pCmd);
+    if (pCmd->GetKind() != enumGISCommandNormal && pTool != NULL)
+    {
+        //check
+        pTool->SetChecked(true);
+        //uncheck
+        if (m_CurrentTool)
+        {
+            m_CurrentTool->SetChecked(false);
+
+            for (size_t i = 0; i < m_CommandBarArray.size(); ++i)
+            {
+                if (m_CommandBarArray[i]->GetType() == enumGISCBToolbar)
+                {
+                    wxAuiToolBar* pToolbar = dynamic_cast<wxAuiToolBar*>(m_CommandBarArray[i]);
+                    if (pToolbar && pCmd)
+                    {
+                        wxAuiToolBarItem* pAuiTool;
+                        
+                        if (m_CurrentTool != pTool)
+                        {
+                            pAuiTool  = pToolbar->FindTool(m_CurrentTool->GetId());
+                            if (pAuiTool)
+                            {
+                                pAuiTool->SetState(wxAUI_BUTTON_STATE_NORMAL);
+                                pToolbar->RefreshRect(pToolbar->GetToolRect(pAuiTool->GetId()));
+                            }
+                        }
+
+                        pAuiTool = pToolbar->FindTool(pTool->GetId());
+                        if (pAuiTool)
+                        {
+                            wxIcon Bmp = pCmd->GetBitmap();
+                            if (Bmp.IsOk())
+                            {
+                                if (!pAuiTool->GetBitmap().IsSameAs(Bmp))
+                                {
+                                    pAuiTool->SetBitmap(Bmp);
+                                    pToolbar->RefreshRect(pToolbar->GetToolRect(pAuiTool->GetId()));
+                                }
+                            }
+
+                            if (pCmd->GetKind() == enumGISCommandDropDown)
+                            {
+                                if (pCmd->GetChecked())
+                                {
+                                    pAuiTool->SetState(wxAUI_BUTTON_STATE_CHECKED);
+                                    pToolbar->RefreshRect(pToolbar->GetToolRect(pAuiTool->GetId()));
+                                }
+                            }
+                        }                        
+                    }
+                }
+            }
+        }
+
+        m_CurrentTool = pTool;
+    }
+    else
+    {
+        pCmd->OnClick();
+    }
+}
+
 void wxGISApplication::OnCommandUI(wxUpdateUIEvent& event)
 {
     //event.Skip();
@@ -111,7 +179,7 @@ void wxGISApplication::OnCommandUI(wxUpdateUIEvent& event)
 
         event.SetText(sCaption);
 //#ifdef __WXMSW__
-		if(pCmd->GetKind() == enumGISCommandCheck)
+        if (pCmd->GetKind() == enumGISCommandCheck)
 //#endif
             event.Check(pCmd->GetChecked());
 
@@ -198,8 +266,10 @@ void wxGISApplication::OnCommandUI(wxUpdateUIEvent& event)
         case enumGISCBToolbar:
             {
                 wxGISToolBar* pGISToolBar = dynamic_cast<wxGISToolBar*>(m_CommandBarArray[i]);
-                if(pGISToolBar)
+                if (pGISToolBar)
+                {
                     pGISToolBar->UpdateControls();
+                }
                 wxAuiToolBar* pToolbar = dynamic_cast<wxAuiToolBar*>(m_CommandBarArray[i]);
                 if(pToolbar && pCmd)
                 {
@@ -210,16 +280,6 @@ void wxGISApplication::OnCommandUI(wxUpdateUIEvent& event)
                             pTool->SetShortHelp(pCmd->GetTooltip() + wxT(" (") + sAcc + wxT(")"));
                         else
                             pTool->SetShortHelp(pCmd->GetTooltip());
-//#ifdef __WXMSW__
-                        if(!pTool->GetBitmap().IsOk())
-                        {
-                            wxIcon Bmp = pCmd->GetBitmap();
-                            if(Bmp.IsOk())
-                                pTool->SetBitmap(Bmp);
-                            else
-                                pTool->SetBitmap(wxBitmap(tool_16_xpm));
-                        }
-//#endif //__WXMSW__
                     }
                 }
             }
@@ -506,10 +566,6 @@ bool wxGISApplication::SetupSys(const wxString &sSysPath)
 bool wxGISApplication::SetupLoc(const wxString &sLoc, const wxString &sLocPath)
 {
     wxLogMessage(_("wxGISApplication: Initialize locale"));
-
- //   if(m_pszOldLocale != NULL)
-	//	setlocale(LC_NUMERIC, m_pszOldLocale);
-	//wxDELETE(m_pszOldLocale);
     wxDELETE(m_pLocale);
 
 	//init locale
@@ -521,6 +577,7 @@ bool wxGISApplication::SetupLoc(const wxString &sLoc, const wxString &sLocPath)
 		{
 			iLocale = loc_info->Language;
 			wxLogMessage(_("wxGISApplication: Language is set to %s"), loc_info->Description.c_str());
+            wxLogMessage(_("wxGISApplication: Language locale files path '%s'"), sLocPath.c_str());
 		}
 
         // don't use wxLOCALE_LOAD_DEFAULT flag so that Init() doesn't return
@@ -540,10 +597,11 @@ bool wxGISApplication::SetupLoc(const wxString &sLoc, const wxString &sLocPath)
     // in the default locations, but when the program is not installed the
     // catalogs are in the build directory where we wouldn't find them by
     // default
-	wxString sLocalePath = sLocPath;// + wxFileName::GetPathSeparator() + sLoc;
+	wxString sLocalePath = sLocPath + wxFileName::GetPathSeparator() + sLoc;//;//
 	if(wxDirExists(sLocalePath))
 	{
-		wxLocale::AddCatalogLookupPathPrefix(sLocalePath);
+        wxFileName oParent(sLocalePath);
+        wxLocale::AddCatalogLookupPathPrefix(oParent.GetPath());
 
 		// Initialize the catalogs we'll be using
 		//load multicat from locale
@@ -567,11 +625,6 @@ bool wxGISApplication::SetupLoc(const wxString &sLoc, const wxString &sLocPath)
 		}
 	#endif
 	}
-
-	//support of dot in doubles and floats
-	//m_pszOldLocale = strdup(setlocale(LC_NUMERIC, NULL));
- //   if( setlocale(LC_NUMERIC,"C") == NULL )
- //       m_pszOldLocale = NULL;
 
     m_sDecimalPoint = wxLocale::GetInfo(wxLOCALE_DECIMAL_POINT, wxLOCALE_CAT_NUMBER);
 

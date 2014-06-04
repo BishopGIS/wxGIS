@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -603,6 +603,7 @@ BEGIN_EVENT_TABLE(wxGxLocationComboBox, wxComboCtrl)
     EVT_KILL_FOCUS(wxGxLocationComboBox::OnKillFocus)
     EVT_CHAR(wxGxLocationComboBox::OnChar)
     EVT_MOUSEWHEEL(wxGxLocationComboBox::OnMouseWheel)
+    EVT_LEFT_DCLICK(wxGxLocationComboBox::OnMouseDblClick)
 END_EVENT_TABLE()
 
 wxGxLocationComboBox::wxGxLocationComboBox(wxWindow* parent, wxWindowID id, const wxSize& size) : wxComboCtrl(parent, id, wxEmptyString, wxDefaultPosition, size, wxTE_PROCESS_ENTER), wxGxPathsListViewPopupParent()
@@ -823,5 +824,14 @@ void wxGxLocationComboBox::OnChar(wxKeyEvent& event)
 void wxGxLocationComboBox::OnMouseWheel(wxMouseEvent& event)
 {
     wxGxPathsListViewPopupParent::OnMouseWheel(event);
+}
+
+void wxGxLocationComboBox::OnMouseDblClick(wxMouseEvent& event)
+{
+    event.Skip();
+    //select last dir
+    wxString sPath = GetValue();
+    int nPos = sPath.Find(wxFileName::GetPathSeparator(), true);
+    SetSelection(nPos, sPath.Len());
 }
 

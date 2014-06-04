@@ -3,11 +3,11 @@
  * Purpose:  wxGISTablePropertyPage class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2011-2012 Bishop
+*   Copyright (C) 2011-2012,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -62,9 +62,11 @@ bool wxGISTablePropertyPage::Create(wxGxTableDataset* pGxDataset, wxWindow* pare
     m_pDataset = wxDynamicCast(m_pGxDataset->GetDataset(false), wxGISTable);
     if(!m_pDataset)
         return false;
-	if(!m_pDataset->IsOpened())
-		if(!m_pDataset->Open(0, 0, false))
-			return false;
+    if (!m_pDataset->IsOpened())
+    {
+        if (!m_pDataset->Open(0, TRUE, false))
+            return false;
+    }
 
 	wxBoxSizer* bMainSizer;
 	bMainSizer = new wxBoxSizer( wxVERTICAL );
@@ -77,7 +79,7 @@ bool wxGISTablePropertyPage::Create(wxGxTableDataset* pGxDataset, wxWindow* pare
 
     bMainSizer->Add( m_pg, 1, wxEXPAND | wxALL, 5 );
 
-	this->SetSizer( bMainSizer );
+	this->SetSizerAndFit( bMainSizer );
 	this->Layout();
 
     return true;

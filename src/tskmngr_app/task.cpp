@@ -1,13 +1,13 @@
 /******************************************************************************
  * Project:  wxGIS (Task Manager)
  * Purpose:  Task and TaskCategoryList classes.
- * Author:   Bishop (aka Barishnikov Dmitriy), polimax@mail.ru
+ * Author:   Dmitry Barishnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2012-2013 Bishop
+*   Copyright (C) 2012-2014 Dmitry Barishnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -24,8 +24,6 @@
 
 #include <wx/dir.h>
 #include <wx/wfstream.h>
-
-#define TASK_LOAD_COUNT 15
 
 //------------------------------------------------------------------
 // wxGISTaskBase
@@ -89,7 +87,6 @@ bool wxGISTaskBase::Save(void)
     }
 
     wxJSONWriter writer( wxJSONWRITER_STYLED | wxJSONWRITER_WRITE_COMMENTS );  
-    writer.SetDoubleFmtString("%.10f");
     wxString  sJSONText;
 
     writer.Write( GetStoreConfig(), sJSONText );
@@ -288,11 +285,15 @@ wxJSONValue wxGISTask::GetAsJSON(void)
 
     val[wxT("params")] = m_Params;
 
+    val[wxT("subtask_count")] = m_omSubTasks.size();
+
+
     return val;
 }
 
 bool wxGISTask::StartTask(long nMessageId, int nUserId)
 {
+    wxLogDebug(wxT("Quered %s"), GetName());
     m_nState = enumGISTaskQuered;
  
     if(m_pParentTask)
@@ -368,6 +369,13 @@ void wxGISTask::GetChildren(long nMessageId, int nUserId)
     if(m_omSubTasks.empty())
         return;
 
+    int nTaskSendCount(7);
+    wxGISAppConfig oConfig = GetConfig();
+    if (oConfig.IsOk())
+    {
+        nTaskSendCount = oConfig.ReadInt(enumGISHKCU, wxString(wxT("wxGISTaskNamager/app/task_send_count")), nTaskSendCount);
+    }
+
     wxVector<wxJSONValue> data;
     int nCounter(0);
     for(wxGISTaskMap::iterator it = m_omSubTasks.begin(); it != m_omSubTasks.end(); ++it)
@@ -377,7 +385,7 @@ void wxGISTask::GetChildren(long nMessageId, int nUserId)
         {
             data.push_back(pTask->GetAsJSON());
             nCounter++;
-            if(nCounter > TASK_LOAD_COUNT)
+            if (nCounter > nTaskSendCount)
             {
                  wxJSONValue out_val;
                  out_val[wxT("id")] = m_nId;
@@ -454,7 +462,7 @@ void wxGISTask::NetCommand(wxGISNetCommandState eCmdState, const wxJSONValue &va
             //}
             break;
         case enumGISCmdStDel:
-            if(!Delete(nMessageId, nUserId) && m_pParentTask)
+            if(!Delete(nMessageId, wxNOT_FOUND) && m_pParentTask)
             {                
                 wxJSONValue idval;
                 idval[wxT("id")] = m_nId;
@@ -470,7 +478,7 @@ void wxGISTask::NetCommand(wxGISNetCommandState eCmdState, const wxJSONValue &va
 //            }
             break; 
         case enumGISCmdStStart:
-            if(!StartTask(nMessageId, nUserId) && m_pParentTask)
+            if (!StartTask(nMessageId, wxNOT_FOUND) && m_pParentTask)
             {                
                 wxJSONValue idval;
                 idval[wxT("id")] = m_nId;
@@ -478,7 +486,7 @@ void wxGISTask::NetCommand(wxGISNetCommandState eCmdState, const wxJSONValue &va
             }
             break; 
         case enumGISCmdStStop:
-            if(!StopTask(nMessageId, nUserId) && m_pParentTask)
+            if (!StopTask(nMessageId, wxNOT_FOUND) && m_pParentTask)
             {                
                 wxJSONValue idval;
                 idval[wxT("id")] = m_nId;
@@ -556,17 +564,17 @@ void wxGISTask::OnStop(void)
     
     if(m_omSubTasks.empty())
     {
-        if(m_nState == enumGISTaskWork)
+        if (m_nState == enumGISTaskDone || m_nState == enumGISTaskError)
         {
-            Stop();
             StartNextQueredTask();
+            return;
         }
-        m_nState = enumGISTaskPaused;
+
+        Stop();
+        StartNextQueredTask();
 
         //change task and send message
         ChangeTask();
-
-        StartNextQueredTask();
 
         Save();
     }
@@ -598,10 +606,11 @@ bool wxGISTask::Start(void)
 {
     m_dfPrevDone = 0;
     bool bReturn = wxGISProcess::Start();
-    if(bReturn)
+    if (!bReturn)
     {
-        ChangeTask();
+        m_nState = enumGISTaskError;
     }
+    ChangeTask();
     return bReturn;
 }
 
@@ -626,7 +635,7 @@ void wxGISTask::ChangeTask()
     val[wxT("vol")] = wxUint64(m_nVolume.GetValue());
     val[wxT("beg")] = SetDateValue(m_dtBeg);
     val[wxT("end")] = SetDateValue(m_dtEstEnd);
-    m_pParentTask->SendNetMessage(enumGISNetCmdCmd, enumGISCmdStChng, enumGISPriorityHighest, val, _("Task changed"), wxNOT_FOUND);
+    m_pParentTask->SendNetMessage(enumGISNetCmdCmd, enumGISCmdStChng, enumGISPriorityHigh, val, _("Task changed"), wxNOT_FOUND);
 }
 
 void wxGISTask::ChangeTaskMsg(wxGISEnumMessageType nType, const wxString &sInfoData)
@@ -683,7 +692,6 @@ long wxGISTask::Execute(void)
             if(Param.IsArray())
             {
                 //wxJSONWriter writer( wxJSONWRITER_NONE );
-                //writer.SetDoubleFmtString("%.10f");
                 //writer.Write( Param, sParam );
                 continue;
             }
@@ -848,11 +856,13 @@ bool wxGISTaskCategory::Load(void)
             wxGISTaskBase* pGISTask = new wxGISTask(this, m_sStoragePath + wxFileName::GetPathSeparator() + sTaskName);
             if(pGISTask->Load())
             {
+                wxLogMessage(_("The task '%s' loaded"), pGISTask->GetName().c_str());
                 m_omSubTasks[pGISTask->GetId()] = pGISTask;
             }
             else
             {
-                wxDELETE(pGISTask);   
+                wxLogError(_("The task from '%s' load failed "), sTaskName.c_str());
+                wxDELETE(pGISTask);
             }
             bContinue = dir.GetNext(&sTaskName);
         }
@@ -909,7 +919,7 @@ void wxGISTaskCategory::NetCommand(wxGISNetCommandState eCmdState, const wxJSONV
     switch(eCmdState)
     {
         case enumGISCmdStAdd: //Add new task to specified category. Return result of operation
-            if(!AddTask(val[wxT("task")], nMessageId, nUserId))
+            if (!AddTask(val[wxT("task")], nMessageId, wxNOT_FOUND))
             {
                 wxNetMessage msgout(enumGISNetCmdNote, enumGISNetCmdStErr, enumGISPriorityLow, nMessageId);
                 msgout.SetMessage(m_sLastError);
@@ -1016,6 +1026,7 @@ void wxGISTaskCategory::SendNetMessage(wxGISNetCommand eCmd, wxGISNetCommandStat
 
 bool wxGISTaskCategory::AddTask(const wxJSONValue &TaskConfig, long nMessageId, int nUserId)
 {
+    wxLogMessage(_("Create new task in category '%s'"), GetName().c_str());
     wxGISTask *pTask = new wxGISTask(this, GetNewStorePath(wxString::Format(wxT("%d"), wxNewId())));
 
     //store in file
@@ -1032,6 +1043,7 @@ bool wxGISTaskCategory::AddTask(const wxJSONValue &TaskConfig, long nMessageId, 
     {
         m_sLastError = wxString::Format(_("Save changes to file '%s' failed"), pTask->GetStorePath().c_str());
         wxDELETE(pTask);
+        wxLogError(_("Create new task in category '%s' failed. %s"), GetName().c_str(), m_sLastError.c_str());
         return false;
     }
 }
@@ -1051,6 +1063,13 @@ void wxGISTaskCategory::GetChildren(long nMessageId, int nUserId)
     if(m_omSubTasks.empty())
         return;
 
+    int nTaskSendCount(7);
+    wxGISAppConfig oConfig = GetConfig();
+    if (oConfig.IsOk())
+    {
+        nTaskSendCount = oConfig.ReadInt(enumGISHKCU, wxString(wxT("wxGISTaskNamager/app/task_send_count")), nTaskSendCount);
+    }
+
     wxVector<wxJSONValue> data;
     int nCounter(0);
     for(wxGISTaskMap::iterator it = m_omSubTasks.begin(); it != m_omSubTasks.end(); ++it)
@@ -1060,7 +1079,7 @@ void wxGISTaskCategory::GetChildren(long nMessageId, int nUserId)
         {
             data.push_back(pTask->GetAsJSON());
             nCounter++;
-            if(nCounter > TASK_LOAD_COUNT)
+            if (nCounter > nTaskSendCount)
             {
                 wxJSONValue out_val;
                 out_val[wxT("cat")] = m_sName;
@@ -1090,18 +1109,28 @@ void wxGISTaskCategory::GetChildren(long nMessageId, int nUserId)
 
 void wxGISTaskCategory::StartNextQueredTask()
 {
-    if(GetRunningTaskCount() >= m_nMaxTasks)
+    wxGISQueredTasksArray oaTasks;
+    GetQueredTasks(oaTasks);
+    if (GetRunningTaskCount() == 0 && oaTasks.IsEmpty()) //no more tasks
+    {
+        m_pTaskManager->OnCategoryExecutionFinished(this);
+    
+    }
+    if(GetRunningTaskCount() >= m_nMaxTasks) //to many tasks
         return;
 
-    for(short i = 0; i < m_nMaxTasks; ++i)
-    {
-        if(GetRunningTaskCount() >= m_nMaxTasks)
-            return;
+    wxGISTask* pTask = GetQueredTask();
 
-        wxGISTask* const pTask = GetQueredTask();
+    while (GetRunningTaskCount() < m_nMaxTasks && pTask) //try to start some tasks
+    {
         if(pTask)
         {
             pTask->Start();
+            pTask = GetQueredTask();
+        }
+        else
+        {
+            break;
         }
     }
 }

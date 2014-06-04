@@ -1,13 +1,13 @@
 /******************************************************************************
  * Project:  wxGIS (GIS Server)
  * Purpose:  Main application class.
- * Author:   Bishop (aka Barishnikov Dmitriy), polimax@mail.ru
+ * Author:   Dmitry Barishnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2010-2012 Bishop
+*   Copyright (C) 2010-2012,2014 Bishop
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -32,16 +32,20 @@
 //---------------------------------------------
 IMPLEMENT_APP_CONSOLE(wxGISTaskManagerApp)
 
-wxGISTaskManagerApp::wxGISTaskManagerApp(void) : wxAppConsole(), wxThreadHelper()
+wxGISTaskManagerApp::wxGISTaskManagerApp(void) : wxAppConsole(), wxThreadHelper(), wxGISService()
 {
-    m_vendorName = wxString(wxT("wxGIS"));
+    m_vendorName = wxString(VENDOR);
     m_vendorDisplayName = wxString(wxT("wxGIS"));
 
     m_appName = wxString(wxT("wxGISTaskManager"));
     m_appDisplayName = wxString(wxT("NextGIS Task Manager"));
     m_className = wxString(wxT("wxGISTaskManagerApp"));
 
+    m_sServiceName = m_appName + wxString(wxT("_service"));
+    m_sServiceDisplayName = m_appDisplayName + wxString(_(" service"));
+
     m_pTaskManager = NULL;
+    m_bService = false;
 }
 
 wxGISTaskManagerApp::~wxGISTaskManagerApp(void)
@@ -64,7 +68,7 @@ bool wxGISTaskManagerApp::OnInit()
 #endif
 
  
-#ifdef __WXMSW__
+#ifdef _WIN32
 	wxLogDebug(wxT("wxSocketBase::Initialize"));
     wxSocketBase::Initialize();
 #endif
@@ -81,7 +85,7 @@ int wxGISTaskManagerApp::OnExit()
     wxDELETE(m_pTaskManager);
 
     Uninitialize();
-#ifdef __WXMSW__
+#ifdef _WIN32
     wxSocketBase::Shutdown();
 #endif
 
@@ -95,23 +99,25 @@ int wxGISTaskManagerApp::OnExit()
 // Loop until user enters q or Q
 wxThread::ExitCode wxGISTaskManagerApp::Entry()
 {
-    // IMPORTANT:
-    // this function gets executed in the secondary thread context!
-    // here we do our long task, periodically calling TestDestroy():
-    while (!GetThread()->TestDestroy())
+    if (m_bService)
     {
-        wxFprintf(stdout, wxString(_("Press 'q' to quit.\n")));
-        int nChar = getchar();
-        if(nChar == 'q' || nChar == 'Q')
+        StartService();
+    }
+    else
+    {
+        while (!GetThread()->TestDestroy())
         {
-            wxExit(); 
-            break;
+            wxFprintf(stdout, wxString(_("Press 'q' to quit.\n")));
+            int nChar = getchar();
+            if(nChar == 'q' || nChar == 'Q')
+            {
+                wxExit(); 
+                break;
+            }
+            wxThread::Sleep(QUIT_CHAR_DELAY);
         }
-        wxThread::Sleep(QUIT_CHAR_DELAY);
     }
 
-    // TestDestroy() returned true (which means the main thread asked us
-    // to terminate as soon as possible) or we ended the long task...
     return (wxThread::ExitCode)wxTHREAD_NO_ERROR;
 }
 
@@ -143,9 +149,11 @@ void wxGISTaskManagerApp::OnInitCmdLine(wxCmdLineParser& pParser)
 {
     wxAppConsole::OnInitCmdLine(pParser);
     pParser.AddSwitch(wxT( "v" ), wxT( "version" ),     _( "The version of this program" ));
-    pParser.AddSwitch(wxT( "i" ), wxT( "install" ),     _( "Install wxGIS task manager as service" ));
     pParser.AddSwitch(wxT( "r" ), wxT( "run" ),         _( "Run the wxGIS task manager in standalone mode. Press 'q' to quit." ));
+#ifdef _WIN32
+    pParser.AddSwitch(wxT( "i" ), wxT( "install" ),     _( "Install wxGIS task manager as service" ));
     pParser.AddSwitch(wxT( "u" ), wxT( "uninstall" ),   _( "Uninstall wxGIS task manager service" ));
+#endif //_WIN32
     pParser.AddSwitch(wxT( "s" ), wxT( "start" ),       _( "Start wxGIS task manager service" ));
     pParser.AddSwitch(wxT( "a" ), wxT( "app" ),         _( "Start wxGIS task manager from client application" ));
 
@@ -162,11 +170,13 @@ void wxGISTaskManagerApp::OnAppOptions(void)
 {
     wxCmdLineParser Parser;
     Parser.AddSwitch(wxT( "v" ), wxT( "version" ),     _( "The version of this program" ));
-    Parser.AddSwitch(wxT( "i" ), wxT( "install" ),     _( "Install wxGIS task manager as service" ));
     Parser.AddSwitch(wxT( "r" ), wxT( "run" ),         _( "Run the wxGIS task manager in standalone mode. Press 'q' to quit." ));
+#ifdef _WIN32
+    Parser.AddSwitch(wxT("i"), wxT("install"), _("Install wxGIS task manager as service"));
     Parser.AddSwitch(wxT( "u" ), wxT( "uninstall" ),   _( "Uninstall wxGIS task manager service" ));
-    Parser.AddSwitch(wxT( "s" ), wxT( "start" ),       _( "Start wxGIS task manager service" ));
-    Parser.AddSwitch(wxT( "a" ), wxT( "app" ),         _( "Start wxGIS task manager from client application" ));
+#endif //_WIN32
+    Parser.AddSwitch(wxT("s"), wxT("start"), _("Start wxGIS task manager service"));
+    Parser.AddSwitch(wxT("a"), wxT("app"), _("Start wxGIS task manager from client application"));
 
     Parser.SetLogo(wxString::Format(_("%s (%s)\nAuthor: Bishop (aka Barishnikov Dmitriy), polimax@mail.ru\nCopyright (c) 2012-%d"),  m_appDisplayName.c_str(), GetAppVersionString().c_str(), __YEAR__));
 
@@ -178,60 +188,93 @@ bool wxGISTaskManagerApp::OnCmdLineParsed(wxCmdLineParser& pParser)
 	if( pParser.Found( wxT( "v" ) ) )
 	{
 	    OnAppAbout();
-
-        return false;
+        OnExit();
+        exit(EXIT_SUCCESS);
+        return true;
 	}
 
-    if(!Initialize(wxT("wxGISTaskManager"), wxT("tskmngr_")))
-        return false;
-
-	if( pParser.Found( wxT( "r" ) ) || pParser.Found( wxT( "a" ) ))
+	else if( pParser.Found( wxT( "r" ) ) || pParser.Found( wxT( "a" ) ))
 	{
-        if(!m_pTaskManager) 
-            return true;
+        if (!Initialize(wxT("wxGISTaskManager"), wxT("tskmngr_")))
+            return false;
+
+        if (!m_pTaskManager)
+            return false;
+
+        m_bService = false;
 
         CreateAndRunExitThread();
         //wxGISServer Server;
 		if(!m_pTaskManager->Init())
 		{
             m_pTaskManager->Exit();
-			return true;
+            return false;
 		}
 	}
+#ifdef _WIN32
 
-	//if( pParser.Found( wxT( "i" ) ) )
-	//{
-	//	//wxGISService Service(wxT("wxGISServer"));
-	//	//Service.Install();
-	//	return true;
-	//}
+	else if( pParser.Found( wxT( "i" ) ) )
+	{
+        bool bRes = Install(wxT("--start"));
+        if (!bRes)
+        {
+            wxFprintf(stderr, _("install service failed"));
+            return false;
+        }
+        OnExit();
+        exit(EXIT_SUCCESS);
+        return true;
+    }
 
- //	if( pParser.Found( wxT( "u" ) ) )
-	//{
-	//	//wxGISService Service(wxT("wxGISServer"));
-	//	//Service.Uninstall();
-	//	return true;
-	//}
+ 	else if( pParser.Found( wxT( "u" ) ) )
+	{
+        bool bRes = Uninstall();
+        if (!bRes)
+        {
+            wxFprintf(stderr, _("uninstall service failed"));
+            return false;
+        }
+        OnExit();
+        exit(EXIT_SUCCESS);
+        return true;
+    }
    
- //	if( pParser.Found( wxT( "h" ) ) )
-	//{
-	//	pParser.Usage();
-	//	return true;
-	//}
+ 	else if( pParser.Found( wxT( "h" ) ) )
+	{
+		pParser.Usage();
+        OnExit();
+        exit(EXIT_SUCCESS);
+        return true;
+    }
+ 	else if( pParser.Found( wxT( "s" ) ) )
+	{
+        if (!Initialize(wxT("wxGISTaskManager"), wxT("tskmngr_")))
+            return false;
 
- //	if( pParser.Found( wxT( "s" ) ) )
-	//{
-	//	wxFprintf(stdout, wxString(_("Starting service...")));
+        if (!m_pTaskManager)
+            return false;
 
-	//	//wxGISService Service(wxT("wxGISServer"));
-	//	//Service.StartService();
+        if (!m_pTaskManager->Init())
+        {
+            m_pTaskManager->Exit();
+            return false;
+        }
+        m_pTaskManager->SetExitState(enumGISNetCmdStNoExit);
 
-	//	//// When we get here, the service has been stopped
-	//	//if( Service.GetExitCode() == EXIT_SUCCESS)
-	//	//	return true;
+        wxLogMessage(wxT("Starting service..."));
 
-	//	return false;
-	//}
+        m_bService = true;
+        CreateAndRunExitThread();
+	}
+    else
+    {
+		pParser.Usage();
+        OnExit();
+        exit(EXIT_SUCCESS);
+        return true;
+    }
+
+#endif //_WIN32
 
     return wxAppConsole::OnCmdLineParsed(pParser);
 }
@@ -270,5 +313,70 @@ bool wxGISTaskManagerApp::SetupSys(const wxString &sSysPath)
     return true;
 }
 
+void wxGISTaskManagerApp::Run()
+{
+    wxLogMessage(_("%s %s run"), m_sServiceDisplayName.c_str(), GetAppVersionString().c_str());
+
+    while (m_bServiceIsRunning)
+    {
+        wxThread::Sleep(QUIT_CHAR_DELAY);
+    }
+
+    wxThread::Sleep(QUIT_CHAR_DELAY);
+    
+    wxLogMessage(_("%s %s exit run state"), m_sServiceDisplayName.c_str(), GetAppVersionString().c_str());
+}
+
+bool wxGISTaskManagerApp::Initialize()
+{
+    wxLogMessage(_("%s %s initialize"), m_sServiceDisplayName.c_str(), GetAppVersionString().c_str());
+    return true;
+}
+
+void wxGISTaskManagerApp::OnStop()
+{
+    wxLogMessage(_("%s %s stop"), m_sServiceDisplayName.c_str(), GetAppVersionString().c_str());
+    wxDELETE(m_pTaskManager);
+
+    wxGISService::OnStop();
+}
+
+void wxGISTaskManagerApp::OnPause()
+{
+    wxLogMessage(_("%s %s pause"), m_sServiceDisplayName.c_str(), GetAppVersionString().c_str());
+    wxDELETE(m_pTaskManager);
+    wxGISService::OnPause();
+}
+
+void wxGISTaskManagerApp::OnContinue()
+{
+    wxLogMessage(_("%s %s continue"), m_sServiceDisplayName.c_str(), GetAppVersionString().c_str());
+    m_pTaskManager = new wxGISTaskManager();
+
+    if (!m_pTaskManager->Init())
+    {
+        m_pTaskManager->Exit();
+        return;
+    }
+    
+    m_pTaskManager->SetExitState(enumGISNetCmdStNoExit);
+
+    wxGISService::OnContinue();
+}
+
+void wxGISTaskManagerApp::OnInterrogate()
+{
+    wxLogMessage(_("%s %s interrogate"), m_sServiceDisplayName.c_str(), GetAppVersionString().c_str());
+    //report current status of the service
+    wxGISService::OnInterrogate();
+}
+
+void wxGISTaskManagerApp::OnShutdown()
+{
+    wxLogMessage(_("%s %s shutdown"), m_sServiceDisplayName.c_str(), GetAppVersionString().c_str());
+
+    wxGISService::OnShutdown();
+    wxExit();
+}
 
 

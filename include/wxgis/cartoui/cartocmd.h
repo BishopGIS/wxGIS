@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -25,8 +25,11 @@
 #include "wxgis/cartoui/mxeventui.h"
 #include "wxgis/cartoui/identifydlg.h"
 
-/** \class wxGISRotationComboBox cartocmd.h
-    \brief The frame angle rotation input combobox.
+/** @class wxGISRotationComboBox 
+
+    The frame angle rotation input combobox.
+
+    @library {cartoui}
 */
 
 class wxGISRotationComboBox : 
@@ -47,16 +50,27 @@ public:
 protected:
 	//wxGISMapView* m_pMapView;
 	//long m_nConnectionPointMapCookie;
-    wxVector<std::pair<wxWindowID, long>> m_anMapWinIDs;
+    wxVector< std::pair<wxWindowID, long> > m_anMapWinIDs;
 private:
     DECLARE_EVENT_TABLE()
 };
 
-/** \class wxGISCartoMainCmd cartocmd.h
-    \brief The carto main commands.
+enum wxGISEnumCartoMainCmdType{
+    enumGISCartoMainCmdFullExtent = 0,
+    enumGISCartoMainCmdPrevExtent,
+    enumGISCartoMainCmdNextExtent,
+    enumGISCartoMainCmdMax
+};
+
+
+/** @class wxGISCartoMainCmd
+    
+    The carto main commands.
+
+    @library{cartoui}
 */
 
-class wxGISCartoMainCmd :
+class WXDLLIMPEXP_GIS_CTU wxGISCartoMainCmd :
 	public wxGISCommand
 {
 	DECLARE_DYNAMIC_CLASS(wxGISCartoMainCmd)
@@ -82,11 +96,22 @@ private:
     WINDOWARRAY m_anMapWinIDs;
 };
 
-/** \class wxGISCartoMainTool cartocmd.h
-    \brief The carto main tool.
+enum wxGISEnumCartoMainToolType{
+    enumGISCartoMainToolZoomIn = 0,
+    enumGISCartoMainToolZoomOut,
+    enumGISCartoMainToolPan,
+    enumGISCartoMainToolIdentify,
+    enumGISCartoMainToolMax
+};
+
+/** @class wxGISCartoMainTool
+    
+    The carto main tool.
+
+    @library{cartoui}
 */
 
-class wxGISCartoMainTool :
+class WXDLLIMPEXP_GIS_CTU wxGISCartoMainTool :
 	public ITool
 {
 	DECLARE_DYNAMIC_CLASS(wxGISCartoMainTool)
@@ -122,11 +147,22 @@ private:
 	bool m_bCheck;
 };
 
-/** \class wxGISCartoFrameTool cartocmd.h
-    \brief The carto frame tools and commands.
+enum wxGISEnumCartoFrameToolType{
+    enumGISCartoFrameToolRotate = 0,
+    enumGISCartoFrameToolCancelRotate,
+    enumGISCartoFrameToolInputRotateAngle,
+    enumGISCartoFrameToolMax
+};
+
+
+/** @class wxGISCartoFrameTool
+
+    The carto frame tools and commands.
+
+    @library{cartoui}
 */
 
-class wxGISCartoFrameTool :
+class WXDLLIMPEXP_GIS_CTU wxGISCartoFrameTool :
 	public ITool,
 	public IToolControl
 {

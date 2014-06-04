@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -107,12 +107,21 @@ bool wxGxArchive::Rename(const wxString &sNewName)
 //----------------------------------------------------------------------------
 IMPLEMENT_CLASS(wxGxArchiveFolder, wxGxFolder)
 
+wxGxArchiveFolder::wxGxArchiveFolder() : wxGxFolder()
+{
+}
+
 wxGxArchiveFolder::wxGxArchiveFolder(wxGxObject *oParent, const wxString &soName, const CPLString &soPath) : wxGxFolder(oParent, soName, soPath)
 {
 }
 
 wxGxArchiveFolder::~wxGxArchiveFolder(void)
 {
+}
+
+bool wxGxArchiveFolder::IsArchive(void) const
+{
+    return true;
 }
 
 void wxGxArchiveFolder::LoadChildren(void)
@@ -139,11 +148,20 @@ void wxGxArchiveFolder::LoadChildren(void)
         {
             if(VSI_ISDIR(BufL.st_mode))
             {
-		        wxString sCharset(wxT("cp-866"));
-		        wxGISAppConfig oConfig = GetConfig();
-                if(oConfig.IsOk())
-			        sCharset = oConfig.Read(enumGISHKCU, wxString(wxT("wxGISCommon/zip/charset")), sCharset);
-                wxString sFileName(papszItems[i], wxCSConv(sCharset));
+                wxString sFileName;
+                if (IsArchive())
+                {
+		            wxString sCharset(wxT("cp-866"));
+		            wxGISAppConfig oConfig = GetConfig();
+                    if(oConfig.IsOk())
+			            sCharset = oConfig.Read(enumGISHKCU, wxString(wxT("wxGISCommon/zip/charset")), sCharset);
+                    sFileName = wxString(papszItems[i], wxCSConv(sCharset));
+                }
+                else
+                {
+                    sFileName = wxString::FromUTF8(papszItems[i]);
+                }
+
 				GetArchiveFolder(this, sFileName, szFileName);
             }
             else
@@ -161,8 +179,8 @@ void wxGxArchiveFolder::LoadChildren(void)
     {
         wxArrayLong ChildrenIds;
         pCatalog->CreateChildren(this, papszFileList, ChildrenIds);
-        for(size_t i = 0; i < ChildrenIds.GetCount(); ++i)
-            pCatalog->ObjectAdded(ChildrenIds[i]);
+        //for(size_t i = 0; i < ChildrenIds.GetCount(); ++i)
+        //    pCatalog->ObjectAdded(ChildrenIds[i]);
 	}
 
     CSLDestroy( papszFileList );

@@ -3,11 +3,11 @@
  * Purpose:  Markup language object classes.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2010-2011,2013 Bishop
+*   Copyright (C) 2010,2011,2013,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -23,8 +23,11 @@
 #include "wxgis/catalogui/catalogui.h"
 #include "wxgis/catalog/gxmldataset.h"
 
-/** \class wxGxMLDatasetUI gxmldatasetui.h
-    \brief A markup language (kml, gml, etc.) dataset GxObject.
+/** @class wxGxMLDatasetUI
+
+    A markup language (kml, gml, etc.) dataset GxObject.
+
+    @library{catalogui}
 */
 
 class WXDLLIMPEXP_GIS_CLU wxGxMLDatasetUI :
@@ -56,8 +59,11 @@ protected:
     long m_nPendUId;
 };
 
-/** \class wxGxMLSubDatasetUI gxmldatasetui.h
-    \brief A kml layer GxObject.
+/** @class wxGxMLSubDatasetUI
+
+    A kml layer GxObject.
+
+    @library{catalogui}
 */
 
 class WXDLLIMPEXP_GIS_CLU wxGxMLSubDatasetUI :

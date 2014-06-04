@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -46,16 +46,36 @@ bool wxGxWebConnectionFactory::GetChildren(wxGxObject* pParent, char** &pFileNam
     for(int i = CSLCount(pFileNames) - 1; i >= 0; i-- )
     {
         CPLString szExt = CPLGetExtension(pFileNames[i]);
-		if(wxGISEQUAL(szExt, "wconn"))
+        if (wxGISEQUAL(szExt, "wconn"))
 		{
             if( m_bHasDriver )
             {
     			wxGxObject* pObj = GetGxObject(pParent, GetConvName(pFileNames[i]), pFileNames[i], bCheckNames); 
-                if(pObj)
+                if (pObj != NULL)
+                {
                     pChildrenIds.Add(pObj->GetId());
+                }
             }
             pFileNames = CSLRemoveStrings( pFileNames, i, 1, NULL );
 		}
+        else if (wxGISEQUAL(szExt, "xml"))
+        {
+            bool bAdd = false;
+            if (m_bHasDriver)
+            {
+                wxGxObject* pObj = GetGxObject(pParent, GetConvName(pFileNames[i]), pFileNames[i], bCheckNames);
+                if (pObj != NULL)
+                {
+                    pChildrenIds.Add(pObj->GetId());
+                    bAdd = true;
+                }
+            }
+
+            if (bAdd)
+            {
+                pFileNames = CSLRemoveStrings(pFileNames, i, 1, NULL);
+            }
+        }
     }
 	return true;
 }

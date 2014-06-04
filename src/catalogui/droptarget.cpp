@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -33,7 +33,7 @@ wxGISDropTarget::wxGISDropTarget(IViewDropTarget *pOwner)
 {
     m_pOwner = pOwner;
     wxDataObjectComposite* dataobj = new wxDataObjectComposite();
-    dataobj->Add(new wxGISStringDataObject(wxDataFormat(wxT("application/x-vnd.wxgis.gxobject-name"))), true);
+    dataobj->Add(new wxGISStringDataObject(wxDataFormat(wxGIS_DND_NAME)), true);
     dataobj->Add(new wxFileDataObject());
     //dataobj->Add(new wxGISDecimalDataObject(wxDataFormat(wxT("application/x-vnd.wxgis.gxobject-id"))));
     //dataobj->Add(new wxDataObjectSimple(wxDataFormat(wxT("application/x-vnd.qgis.qgis.uri"))));
@@ -81,7 +81,7 @@ wxDragResult wxGISDropTarget::OnData(wxCoord x, wxCoord y, wxDragResult defaultD
         //application/x-vnd.wxgis.gxobject-id
         //application/x-vnd.qgis.qgis.uri
 
-        wxDataFormat PrefferedDataFormat(wxT("application/x-vnd.wxgis.gxobject-name"));
+        wxDataFormat PrefferedDataFormat(wxGIS_DND_NAME);
         if(format == PrefferedDataFormat)
         {
             wxGISStringDataObject* pStringDataObject = static_cast<wxGISStringDataObject *>(dataobj);

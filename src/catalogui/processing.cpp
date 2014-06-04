@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -461,43 +461,13 @@ void ExportSingleVectorDataset(wxWindow* pWnd, const CPLString &sPath, const wxS
         }
     }
 
-    if (!ExportFormat(pFeatureDataset, sPath, sName, pFilter, wxGISNullSpatialFilter, NULL, NULL, static_cast<ITrackCancel*>(&ProgressDlg)))
+    if (!ExportFormat(pFeatureDataset, sPath, sName, pFilter, wxGISNullSpatialFilter, NULL, NULL, true, static_cast<ITrackCancel*>(&ProgressDlg)))
     {
-        wxMessageDialog dlg(pWnd, _("During export there were several errors."), _("Error"), wxOK | wxCENTRE | wxICON_ERROR);
-        wxString extMsg;
-        const wxVector<MESSAGE>& msgs = ProgressDlg.GetWarnings();
-        for (size_t i = 0; i < msgs.size(); ++i)
-        {
-            if (msgs[i].sMessage.IsEmpty())
-                continue;
-            if (msgs[i].eType == enumGISMessageErr)
-                extMsg += _("Error") + wxT(": ");
-            else if (msgs[i].eType == enumGISMessageWarning)
-                extMsg += _("Warning") + wxT(": ");
-            extMsg += msgs[i].sMessage;
-            extMsg += wxT("\n\n");
-        }
-        dlg.SetExtendedMessage(extMsg);
-        dlg.ShowModal();
-
-        wxLogError(extMsg);
+        ShowMessageDialog(pWnd, ProgressDlg.GetWarnings());
     }
     else if (ProgressDlg.GetWarningCount() > 0)
     {
-        wxMessageDialog dlg(pWnd, _("During export there were several warnings."), _("Warning"), wxOK | wxCENTRE | wxICON_WARNING);
-        wxString extMsg;
-        const wxVector<MESSAGE>& msgs = ProgressDlg.GetWarnings();
-        for (size_t i = 0; i < msgs.size(); ++i)
-        {
-            if (msgs[i].eType == enumGISMessageErr)
-                extMsg += _("Error") + wxT(": ");
-            else if (msgs[i].eType == enumGISMessageWarning)
-                extMsg += _("Warning") + wxT(": ");
-            extMsg += msgs[i].sMessage;
-            extMsg += wxT("\n\n");
-        }
-        dlg.SetExtendedMessage(extMsg);
-        dlg.ShowModal();
+        ShowMessageDialog(pWnd, ProgressDlg.GetWarnings());
     }
 
     wsDELETE(pFeatureDataset);
@@ -510,7 +480,44 @@ void ExportSingleRasterDataset(wxWindow* pWnd, const CPLString &sPath, const wxS
 
 void ExportSingleTableDataset(wxWindow* pWnd, const CPLString &sPath, const wxString &sName, wxGxObjectFilter* const pFilter, IGxDataset* const pGxDataset)
 {
+    wxCHECK_RET(pFilter && pGxDataset, wxT("The input pointer is NULL"));
 
+    wxGISProgressDlg ProgressDlg(_("Exporting..."), _("Begin operation..."), 100, pWnd);
+    ProgressDlg.SetAddPercentToMessage(false);
+    ProgressDlg.ShowProgress(true);
+
+    wxGISDataset* pDataset = pGxDataset->GetDataset(false, &ProgressDlg);
+    wxGISTable* pTable = wxDynamicCast(pDataset, wxGISTable);
+
+    if (NULL == pTable)
+    {
+        wxMessageBox(_("The table is empty"), _("Error"), wxCENTRE | wxICON_ERROR | wxOK, pWnd);
+        wxLogError(_("wxGISFeatureDataset pointer is null returned"));
+        return;
+    }
+
+    //create progress dialog
+    if (!pTable->IsOpened())
+    {
+        if (!pTable->Open(0, 0, false, &ProgressDlg))
+        {
+            wxMessageBox(ProgressDlg.GetLastMessage(), _("Error"), wxCENTRE | wxICON_ERROR | wxOK, pWnd);
+            wxLogError(ProgressDlg.GetLastMessage());
+            wsDELETE(pTable);
+            return;
+        }
+    }
+
+    if (!ExportFormat(pTable, sPath, sName, pFilter, wxGISNullSpatialFilter, NULL, NULL, static_cast<ITrackCancel*>(&ProgressDlg)))
+    {
+        ShowMessageDialog(pWnd, ProgressDlg.GetWarnings());
+    }
+    else if (ProgressDlg.GetWarningCount() > 0)
+    {
+        ShowMessageDialog(pWnd, ProgressDlg.GetWarnings());
+    }
+
+    wsDELETE(pTable);
 }
 
 void ExportMultipleVectorDatasets(wxWindow* pWnd, const CPLString &sPath, wxGxObjectFilter* const pFilter, wxVector<EXPORTED_DATASET> &paDatasets)
@@ -525,54 +532,63 @@ void ExportMultipleVectorDatasets(wxWindow* pWnd, const CPLString &sPath, wxGxOb
     {
         ProgressDlg.SetTitle(wxString::Format(_("Proceed %d of %d..."), i + 1, paDatasets.size()));
         wxGISDataset* pDataset = paDatasets[i].pDSet->GetDataset(false, &ProgressDlg);
-        wxGISFeatureDataset* pFeatureDataset = wxDynamicCast(pDataset, wxGISFeatureDataset);
+        wxVector<wxGISFeatureDataset*> apFeatureDatasets;
+        if (pDataset->GetSubsetsCount() == 0)
+        {
+            wxGISFeatureDataset* pFeatureDataset = wxDynamicCast(pDataset, wxGISFeatureDataset);
+            if (NULL != pFeatureDataset)
+            {
+                pFeatureDataset->Reference();
+                apFeatureDatasets.push_back(pFeatureDataset);
+            }
+        }
+        else
+        {
+            for (size_t j = 0; j < pDataset->GetSubsetsCount(); ++j)
+            {
+                wxGISFeatureDataset* pFeatureDataset = wxDynamicCast(pDataset->GetSubset(j), wxGISFeatureDataset);
+                if (NULL != pFeatureDataset)
+                {
+                    pFeatureDataset->Reference();
+                    apFeatureDatasets.push_back(pFeatureDataset);
+                }
+            }
+        }
 
-        if (NULL == pFeatureDataset)
+        if (apFeatureDatasets.size() == 0)
         {
             wxMessageBox(_("The dataset is empty"), _("Error"), wxCENTRE | wxICON_ERROR | wxOK, pWnd);
             wxLogError(_("wxGISFeatureDataset pointer is null returned"));
             return;
         }
 
-        //create progress dialog
-        if (!pFeatureDataset->IsOpened())
+        for (size_t j = 0; j < apFeatureDatasets.size(); ++j)
         {
-            if (!pFeatureDataset->Open(0, 0, false, &ProgressDlg))
+            if (!apFeatureDatasets[j]->IsOpened())
+            {
+                if (!apFeatureDatasets[j]->Open(0, TRUE, false, &ProgressDlg))
+                {
+                    wxMessageBox(ProgressDlg.GetLastMessage(), _("Error"), wxCENTRE | wxICON_ERROR | wxOK, pWnd);
+                    wxLogError(ProgressDlg.GetLastMessage());
+                    wsDELETE(apFeatureDatasets[j]);
+                    continue;
+                }
+            }
+
+            if (!ExportFormat(apFeatureDatasets[j], sPath, paDatasets[i].sName, pFilter, wxGISNullSpatialFilter, NULL, NULL, true, static_cast<ITrackCancel*>(&ProgressDlg)))
             {
                 wxMessageBox(ProgressDlg.GetLastMessage(), _("Error"), wxCENTRE | wxICON_ERROR | wxOK, pWnd);
                 wxLogError(ProgressDlg.GetLastMessage());
-                wsDELETE(pFeatureDataset);
-                return;
+                wsDELETE(apFeatureDatasets[j]);
+                continue;
             }
+            wsDELETE(apFeatureDatasets[j]);
         }
-
-        if (!ExportFormat(pFeatureDataset, sPath, paDatasets[i].sName, pFilter, wxGISNullSpatialFilter, NULL, NULL, static_cast<ITrackCancel*>(&ProgressDlg)))
-        {
-            wxMessageBox(ProgressDlg.GetLastMessage(), _("Error"), wxCENTRE | wxICON_ERROR | wxOK, pWnd);
-            wxLogError(ProgressDlg.GetLastMessage());
-            wsDELETE(pFeatureDataset);
-            return;
-        }
-
-        wsDELETE(pFeatureDataset);
     }
     
     if (ProgressDlg.GetWarningCount() > 0)
     {
-        wxMessageDialog dlg(pWnd, _("During export there were several warnings."), _("Warning"), wxOK | wxCENTRE | wxICON_WARNING);
-        wxString extMsg;
-        const wxVector<MESSAGE>& msgs = ProgressDlg.GetWarnings();
-        for (size_t i = 0; i < msgs.size(); ++i)
-        {
-            if (msgs[i].eType == enumGISMessageErr)
-                extMsg += _("Error") + wxT(": ");
-            else if (msgs[i].eType == enumGISMessageWarning)
-                extMsg += _("Warning") + wxT(": ");
-            extMsg += msgs[i].sMessage;
-            extMsg += wxT("\n\n");
-        }
-        dlg.SetExtendedMessage(extMsg);
-        dlg.ShowModal();
+        ShowMessageDialog(pWnd, ProgressDlg.GetWarnings());
     }
 }
 
@@ -584,6 +600,27 @@ void ExportMultipleRasterDatasets(wxWindow* pWnd, const CPLString &sPath, wxGxOb
 void ExportMultipleTableDatasets(wxWindow* pWnd, const CPLString &sPath, wxGxObjectFilter* const pFilter, wxVector<EXPORTED_DATASET> &paDatasets)
 {
 
+}
+
+void ShowMessageDialog(wxWindow* pWnd, const wxVector<MESSAGE>& msgs)
+{
+    wxMessageDialog dlg(pWnd, _("During export there were several warnings."), _("Warning"), wxOK | wxCENTRE | wxICON_WARNING);
+    wxString extMsg;
+    for (size_t i = 0; i < msgs.size(); ++i)
+    {
+        if (msgs[i].sMessage.IsEmpty())
+            continue;
+        if (msgs[i].eType == enumGISMessageErr)
+            extMsg += _("Error") + wxT(": ");
+        else if (msgs[i].eType == enumGISMessageWarning)
+            extMsg += _("Warning") + wxT(": ");
+        extMsg += msgs[i].sMessage;
+        extMsg += wxT("\n\n");
+    }
+    dlg.SetExtendedMessage(extMsg);
+    dlg.ShowModal();
+
+    wxLogError(extMsg);
 }
 
 #endif // wxGIS_HAVE_GEOPROCESSING

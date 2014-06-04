@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -46,11 +46,13 @@ WXDLLIMPEXP_GIS_DS inline bool IsFileDataset(wxGISEnumDatasetType eDSType, long 
             return false;
         case enumVecGML:
         case enumVecGeoJSON:
+        case enumVecS57:
             return true;
         case enumVecWFS:
         case enumVecMem:
         case enumVecMAX:
         case enumVecUnknown:
+        case enumVecFileDBLayer:
         default:
             return false;
         }
@@ -73,6 +75,7 @@ WXDLLIMPEXP_GIS_DS inline bool IsFileDataset(wxGISEnumDatasetType eDSType, long 
         case enumTableMapinfoMif:
         case enumTableCSV:
             return true;
+        case enumTableFileDBLayer:
         default:
             return false;
         }
@@ -95,6 +98,7 @@ WXDLLIMPEXP_GIS_DS inline bool IsFileDataset(wxGISEnumDatasetType eDSType, long 
         case enumRasterSAGA:
         case enumRasterVRT:
             return true;
+        case enumRasterFileDBLayer:
         case enumRasterWMS:
         case enumRasterWMSTMS:
             return false;
@@ -104,6 +108,22 @@ WXDLLIMPEXP_GIS_DS inline bool IsFileDataset(wxGISEnumDatasetType eDSType, long 
     }
         break;
     case enumGISContainer:
+    {
+        wxGISEnumContainerType eSubType = (wxGISEnumContainerType)SubType;
+        switch (eSubType)
+        {
+        case enumContFolder:
+        case enumContGDBFolder:
+        case enumContDataset:
+        case enumContGDB:
+            return true;
+        case enumContRemoteDBConnection:
+        case enumContWebServiceConnection:
+        default:
+            return false;
+        }
+    }
+        break;
     default:
         return false;
     }

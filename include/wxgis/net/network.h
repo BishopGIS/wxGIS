@@ -3,11 +3,11 @@
  * Purpose:  network classes.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2010,2012,2013 Bishop
+*   Copyright (C) 2010,2012-2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -21,19 +21,23 @@
 #pragma once
 
 #include "wxgis/net/message.h"
+#include "wxgis/core/pointer.h"
 
 #include "wx/thread.h"
 #include "wx/socket.h"
 
-#define SLEEP 40
-#define WAITFOR 50
+#define SLEEP 140
+#define WAITFOR 500
 #define BUFF_SIZE 16384
 #define USE_STREAMS
 
 class WXDLLIMPEXP_GIS_NET INetConnection;
 
-/** \class wxNetReaderThread network.h
- *  \brief The network connection reader thread.
+/** @class wxNetReaderThread
+
+    The network connection reader thread.
+
+    @library{net}
  */
 class WXDLLIMPEXP_GIS_NET wxNetReaderThread : public wxThread
 {
@@ -41,14 +45,15 @@ public:
     wxNetReaderThread(INetConnection* pNetConnection);
     virtual void *Entry();
     virtual void OnExit();
-    void ClearConnection();
 protected:
     INetConnection* m_pNetConnection;
-    wxCriticalSection m_CritSect;
 };
 
-/** \class wxNetWriterThread network.h
- *  \brief The network connection writer thread.
+/** @class wxNetWriterThread
+
+    The network connection writer thread.
+
+    @library{net}
  */
 class WXDLLIMPEXP_GIS_NET wxNetWriterThread : public wxThread
 {
@@ -56,14 +61,15 @@ public:
     wxNetWriterThread(INetConnection* pNetConnection);
     virtual void *Entry();
     virtual void OnExit();
-    void ClearConnection();
 protected:
     INetConnection* m_pNetConnection;
-    wxCriticalSection m_CritSect;
 };
 
-/** \class INetConnection network.h
-    \brief The network connection interface class.
+/** @class INetConnection
+
+    The network connection interface class.
+
+    @library{net}
 */
 class WXDLLIMPEXP_GIS_NET INetConnection : 
     public wxGISConnectionPointContainer,

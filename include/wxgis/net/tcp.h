@@ -3,11 +3,11 @@
  * Purpose:  TCP network classes.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2012 Bishop
+*   Copyright (C) 2012,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -23,8 +23,11 @@
 #include "wxgis/net/servernet.h"
 #include "wxgis/net/netfactory.h"
 
-/** \class wxServerTCPNetworkPlugin tcp.h
-    \brief A Server side TCPNetworkPlugin.
+/** @class wxServerTCPNetworkPlugin
+
+    A Server side TCPNetworkPlugin.
+
+    @library{net}
 */
 class WXDLLIMPEXP_GIS_NET wxServerTCPNetworkPlugin : public INetPlugin
 {
@@ -56,8 +59,11 @@ protected:
     DECLARE_EVENT_TABLE()
 };
 
-/** \class wxClientTCPNetConnection tcp.h
-    \brief The connection to communicate with server.
+/** @class wxClientTCPNetConnection
+
+    The connection to communicate with server.
+
+    @library{net}
 */
 class WXDLLIMPEXP_GIS_NET wxClientTCPNetConnection : 
 	public wxGISNetClientConnection
@@ -103,8 +109,11 @@ private:
     DECLARE_EVENT_TABLE()
 };
 
-/** \class wxClientTCPNetFactory tcp.h
-    \brief The factory to create net connections.
+/** @class wxClientTCPNetFactory
+
+    The factory to create net connections.
+
+    @library{net}
 */
 class WXDLLIMPEXP_GIS_NET wxClientTCPNetFactory : 
 	public INetConnFactory

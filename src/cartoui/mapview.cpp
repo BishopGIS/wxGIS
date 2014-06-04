@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -36,6 +36,7 @@
 #define INCH_TO_CM 2.54
 #define TM_DEFAULT_FLASH_PERIOD 400
 #define TM_LAYER_UPDATE_REFRESH 950
+#define MIN_SIZE_TO_DRAW 100
 
 //-----------------------------------------------
 // wxGISMapView
@@ -145,7 +146,7 @@ void wxGISMapView::OnPaint(wxPaintEvent & event)
 
 void wxGISMapView::OnSize(wxSizeEvent & event)
 {
-    if(m_PrevSize == event.GetSize() || event.GetSize().GetWidth () < 200 || event.GetSize().GetHeight () < 200)
+    if (m_PrevSize == event.GetSize() || event.GetSize().GetWidth() < MIN_SIZE_TO_DRAW || event.GetSize().GetHeight() < MIN_SIZE_TO_DRAW)
         return;
 
     //event.Skip(false);
@@ -392,15 +393,15 @@ void wxGISMapView::OnDraw(wxGISEnumDrawPhase nPhase)
 
 		if(!pLayer->GetVisible())
 			continue; //not visible
-		if(m_pGISDisplay->IsCacheDerty(pLayer->GetCacheID()))
+		if(m_pGISDisplay->IsCacheDerty(pLayer->GetCacheId()))
 		{
 			//erase bk if layer no 0
 			if(i == 0)
 				m_pGISDisplay->OnEraseBackground();
 
-			if(m_pGISDisplay->GetDrawCache() != pLayer->GetCacheID())
+			if(m_pGISDisplay->GetDrawCache() != pLayer->GetCacheId())
             {
-				m_pGISDisplay->SetDrawCache(pLayer->GetCacheID());
+				m_pGISDisplay->SetDrawCache(pLayer->GetCacheId());
             }
 
 			if(pLayer->Draw(nPhase, m_pTrackCancel))
@@ -409,7 +410,7 @@ void wxGISMapView::OnDraw(wxGISEnumDrawPhase nPhase)
                 //if(i < m_paLayers.size() - 1 && m_paLayers[i + 1]->GetCacheID() != pLayer->GetCacheID())
                 //    m_pGISDisplay->SetCacheDerty(pLayer->GetCacheID(), false);
                 //else if(i == m_paLayers.size() - 1)
-                m_pGISDisplay->SetCacheDerty(pLayer->GetCacheID(), false);
+                m_pGISDisplay->SetCacheDerty(pLayer->GetCacheId(), false);
             }
 		}
 	}
@@ -437,14 +438,22 @@ bool wxGISMapView::AddLayer(wxGISLayer* pLayer)
 	{
 		//Create cache if needed
 		if(pLayer->IsCacheNeeded())
-			pLayer->SetCacheID(m_pGISDisplay->AddCache());
+			pLayer->SetCacheId(m_pGISDisplay->AddCache());
 		else
-			pLayer->SetCacheID(m_pGISDisplay->GetLastCacheID());
+			pLayer->SetCacheId(m_pGISDisplay->GetLastCacheID());
 	}
 
     pLayer->Advise(this); //by now we don't need unadvise as layer will always destruct before map
 
-	return wxGISExtentStack::AddLayer(pLayer);
+	bool bRes = wxGISExtentStack::AddLayer(pLayer);
+
+    if (bRes)
+    {
+        wxMxMapViewUIEvent wxMxMapViewUIEvent_(GetId(), wxMXMAP_LAYER_ADDED, pLayer->GetId());
+        AddEvent(wxMxMapViewUIEvent_);
+    }
+
+    return bRes;
 }
 
 void wxGISMapView::Clear(void)
@@ -453,6 +462,8 @@ void wxGISMapView::Clear(void)
 	//Clear caches
 	m_pGISDisplay->Clear();
 	wxGISExtentStack::Clear();
+    wxMxMapViewUIEvent wxMxMapViewUIEvent_(GetId(), wxMXMAP_CLEARED);
+    AddEvent(wxMxMapViewUIEvent_);
 }
 
 void wxGISMapView::OnMouseWheel(wxMouseEvent& event)
@@ -533,8 +544,8 @@ double wxGISMapView::GetScaleRatio(OGREnvelope& Bounds, wxDC& dc)
 		w_h = w_h * PIDEG * m_SpatialReference->GetSemiMinor();
 	}
 
-	double screen = std::min(screen_w, screen_h);
-	double world = std::min(w_w, w_h);
+	double screen = wxMin(screen_w, screen_h);
+    double world = wxMin(w_w, w_h);
 
 	return (world * 100) / screen;
 }
@@ -706,7 +717,8 @@ void wxGISMapView::RotateBy(wxPoint MouseLocation)
 				m_dCurrentAngle += DOUBLEPI;
 			DrawToolTip(CDC, wxString::Format(_("%.4f degree"), m_dCurrentAngle * DEGPI));
 
-            AddEvent(wxMxMapViewUIEvent(GetId(), wxMXMAP_ROTATED));
+            wxMxMapViewUIEvent wxMxMapViewUIEvent_(GetId(), wxMXMAP_ROTATED);
+            AddEvent(wxMxMapViewUIEvent_);
 		}
 	}
 }
@@ -747,7 +759,8 @@ void wxGISMapView::SetRotate(double dAngleRad)
 	if(m_dCurrentAngle < 0)
 		m_dCurrentAngle += DOUBLEPI;
 
-	AddEvent(wxMxMapViewUIEvent(GetId(), wxMXMAP_ROTATED));
+    wxMxMapViewUIEvent wxMxMapViewUIEvent_(GetId(), wxMXMAP_ROTATED);
+    AddEvent(wxMxMapViewUIEvent_);
 
     CreateAndRunDrawThread();
 }
@@ -768,7 +781,7 @@ bool wxGISMapView::CanRotate(void)
 {
     for(size_t i = 0; i < GetLayerCount(); ++i)
     {
-        wxGISLayer* const pLayer = GetLayer(i);
+        wxGISLayer* const pLayer = GetLayerByIndex(i);
         if(pLayer)
         {
             wxGISDataset* pDSet = pLayer->GetDataset();
@@ -800,6 +813,9 @@ OGREnvelope wxGISMapView::GetFullExtent(void)
 
 void wxGISMapView::AddFlashGeometry(const wxGISGeometry& Geometry, wxGISSymbol* const pSymbol, unsigned char nPhase)
 {
+    if (NULL == pSymbol || !Geometry.IsOk())
+        return;
+
     wxCriticalSectionLocker locker(m_FlashCritSect);
     pSymbol->Reference();
     FLASH_GEOMETRY fgeom = {Geometry, nPhase, pSymbol};
@@ -1022,9 +1038,11 @@ void wxGISMapView::OnMapDrawing(wxMxMapViewUIEvent& event)
         if(m_nDrawingState != enumGISMapFlashing) //maybe m_nDrawingState == enumGISMapNone
         m_nDrawingState = enumGISMapDrawing;
 
-        wxCHECK_RET(m_pAni, wxT("Animation progress is not initiated"));
-        m_pAni->ShowProgress(true);
-        m_pAni->Play();
+        if (NULL != m_pAni)
+        {
+            m_pAni->ShowProgress(true);
+            m_pAni->Play();
+        }
     }
     else if(eType == wxMXMAP_DRAWING_STOP)
     {
@@ -1039,12 +1057,15 @@ void wxGISMapView::OnMapDrawing(wxMxMapViewUIEvent& event)
 	    //m_nDrawingState = enumGISMapNone;
 	    Refresh();
 
-        wxCHECK_RET(m_pAni, wxT("Animation progress is not initiated"));
-        m_pAni->Stop();
-        m_pAni->ShowProgress(false);
+        if (NULL != m_pAni)
+        {
+            m_pAni->Stop();
+            m_pAni->ShowProgress(false);
+        }
     }
 
-    AddEvent(wxMxMapViewUIEvent(event));
+    wxMxMapViewUIEvent wxMxMapViewUIEvent_(event);
+    AddEvent(wxMxMapViewUIEvent_);
 }
 
 wxThread::ExitCode wxGISMapView::Entry()
@@ -1108,7 +1129,7 @@ void wxGISMapView::DestroyDrawThread(void)
 
 void wxGISMapView::OnLayerChanged(wxMxMapViewEvent& event)
 {
-    wxLogDebug(wxT("changed map: %d"), event.GetLayerCacheId());
+    //wxLogDebug(wxT("changed layer: %d"), event.GetLayerId());
     //if(m_nDrawingState != enumGISMapNone)
     //    return;
     //TODO: update extents
@@ -1120,7 +1141,10 @@ void wxGISMapView::OnLayerChanged(wxMxMapViewEvent& event)
     
     
     wxTimeSpan sp = wxDateTime::Now() - m_dtNow;
-    m_pGISDisplay->SetUpperCachesDerty( event.GetLayerCacheId() );
+    wxGISLayer *pLayer = GetLayerById(event.GetLayerId());
+    if (NULL == pLayer)
+        return;
+    m_pGISDisplay->SetUpperCachesDerty(pLayer->GetCacheId());
     if(sp.GetMilliseconds() > TM_LAYER_UPDATE_REFRESH)
     {
         m_dtNow = wxDateTime::Now();
@@ -1137,6 +1161,9 @@ void wxGISMapView::OnLayerChanged(wxMxMapViewEvent& event)
 
 void wxGISMapView::OnLayerLoading(wxMxMapViewEvent& event)
 {
-    m_pGISDisplay->SetUpperCachesDerty( event.GetLayerCacheId() ); //TODO: this will draw current caches directly to map. Changes in one will be overwite by upper
+    wxGISLayer *pLayer = GetLayerById(event.GetLayerId());
+    if (NULL == pLayer)
+        return;
+    m_pGISDisplay->SetUpperCachesDerty(pLayer->GetCacheId());//TODO: this will draw current caches directly to map. Changes in one will be overwrite by upper
     Refresh();
 }

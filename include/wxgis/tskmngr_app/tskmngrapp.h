@@ -1,13 +1,13 @@
 /******************************************************************************
  * Project:  wxGIS (Task Manager)
  * Purpose:  Task manager application class.
- * Author:   Bishop (aka Barishnikov Dmitriy), polimax@mail.ru
+ * Author:   Dmitry Barishnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2012 Bishop
+*   Copyright (C) 2010-2012,2014 Bishop
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -31,26 +31,36 @@
 #include <wx/snglinst.h>
 #include <wx/cmdline.h> 
 
-/** \class wxGISTaskManagerApp tskmngrapp.h
-    \brief Main task manager application.
+/** @class wxGISTaskManagerApp
 
+    Main task manager application.
     This is an singleton application which manage tasks (geoprocessing or something else). Each application or different instances of the same application create, change, delete, start, stop, pause their tasks via this application. The application instance should try to start task manager application and connect to it via tcp ethernet protocol. While exiting - send exit command to task manager. If there are no any other connections, task manager should exit. In standalone mode task manager can be run as a service to execute by timer.
+
 */
 class wxGISTaskManagerApp :
 	public wxAppConsole,
     public wxThreadHelper,
-    public wxGISInitializer
+    public wxGISInitializer, 
+    public wxGISService
 {
 public:
 	wxGISTaskManagerApp(void);
 	virtual ~wxGISTaskManagerApp(void);
-    //wxAppConsole
+    // wxAppConsole
     virtual bool OnInit();
     virtual int OnExit();
     void OnInitCmdLine(wxCmdLineParser& pParser);
     bool OnCmdLineParsed(wxCmdLineParser& pParser);
-    //wxGISInitializer
+    // wxGISInitializer
 	virtual bool Initialize(const wxString &sAppName, const wxString &sLogFilePrefix);//, wxCmdLineParser& parser
+    // wxGISService
+    virtual void Run();
+    virtual bool Initialize();
+    virtual void OnStop();
+    virtual void OnPause();
+    virtual void OnContinue();
+    virtual void OnInterrogate();
+    virtual void OnShutdown();
     // IApplication
     virtual bool SetupSys(const wxString &sSysPath);
     virtual wxString GetAppName(void) const {return m_appName;};
@@ -63,13 +73,14 @@ protected:
     virtual wxThread::ExitCode Entry();
     bool CreateAndRunExitThread(void);
     void DestroyExitThread(void);
-private:
+protected:
     wxGISAppConfig m_oConfig;
 #ifdef wxUSE_SNGLINST_CHECKER
     wxSingleInstanceChecker *m_pChecker;
 #endif    
     wxCriticalSection m_ExitLock;
     wxGISTaskManager* m_pTaskManager;
+    bool m_bService;
 };
 
 DECLARE_APP(wxGISTaskManagerApp)

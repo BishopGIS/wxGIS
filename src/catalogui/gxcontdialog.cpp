@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -160,7 +160,7 @@ wxGxContainerDialog::wxGxContainerDialog(wxWindow* parent, wxWindowID id, const 
 
 	bMainSizer->Add( bFooterSizer, 0, wxEXPAND, 8 );
 
-	this->SetSizer( bMainSizer );
+	this->SetSizerAndFit( bMainSizer );
 	this->Layout();
 
 	wxGISCatalogMainCmd* pwxGISCatalogMainCmd(NULL);
@@ -169,7 +169,7 @@ wxGxContainerDialog::wxGxContainerDialog(wxWindow* parent, wxWindowID id, const 
 	//create folder
 	pwxGISCatalogMainCmd = new wxGISCatalogMainCmd();
 	pwxGISCatalogMainCmd->OnCreate(this);
-    pwxGISCatalogMainCmd->SetID(ID_PLUGINCMD + nCmdCounter);
+    pwxGISCatalogMainCmd->SetId(ID_PLUGINCMD + nCmdCounter);
 	pwxGISCatalogMainCmd->SetSubType(7);
 	m_CommandArray.push_back(pwxGISCatalogMainCmd);
     nCmdCounter++;
@@ -177,7 +177,7 @@ wxGxContainerDialog::wxGxContainerDialog(wxWindow* parent, wxWindowID id, const 
 	//rename
 	pwxGISCatalogMainCmd = new wxGISCatalogMainCmd();
 	pwxGISCatalogMainCmd->OnCreate(this);
-    pwxGISCatalogMainCmd->SetID(ID_PLUGINCMD + nCmdCounter);
+    pwxGISCatalogMainCmd->SetId(ID_PLUGINCMD + nCmdCounter);
 	pwxGISCatalogMainCmd->SetSubType(8);
 	m_CommandArray.push_back(pwxGISCatalogMainCmd);
     nCmdCounter++;
@@ -185,7 +185,7 @@ wxGxContainerDialog::wxGxContainerDialog(wxWindow* parent, wxWindowID id, const 
 	//refresh
 	pwxGISCatalogMainCmd = new wxGISCatalogMainCmd();
 	pwxGISCatalogMainCmd->OnCreate(this);
-    pwxGISCatalogMainCmd->SetID(ID_PLUGINCMD + nCmdCounter);
+    pwxGISCatalogMainCmd->SetId(ID_PLUGINCMD + nCmdCounter);
 	pwxGISCatalogMainCmd->SetSubType(9);
 	m_CommandArray.push_back(pwxGISCatalogMainCmd);
 

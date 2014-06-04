@@ -3,11 +3,11 @@
  * Purpose:  wxGISDataset class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009-2013 Bishop
+*   Copyright (C) 2009-2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -22,9 +22,13 @@
 #pragma once
 
 #include "wxgis/datasource/gdalinh.h"
+#include "wxgis/core/pointer.h"
 
-/** \class wxGISDataset dataset.h
-    \brief The base class for datasets.
+/** @class wxGISDataset
+
+    The base class for datasets.
+
+    @library{datasource}
 */
 class WXDLLIMPEXP_GIS_DS wxGISDataset : 
     public wxObject,
@@ -52,9 +56,9 @@ public:
 	virtual bool Copy(const CPLString &szDestPath, ITrackCancel* const pTrackCancel = NULL);
 	virtual bool Move(const CPLString &szDestPath, ITrackCancel* const pTrackCancel = NULL);    
 	virtual bool CanDelete(void);
-	virtual bool CanRename(void);
+    virtual bool CanRename(void);
     virtual bool CanCopy(const CPLString &szDestPath);
-	virtual bool CanMove(const CPLString &szDestPath);
+    virtual bool CanMove(const CPLString &szDestPath);
 	virtual void Cache(ITrackCancel* const pTrackCancel = NULL) = 0;
     virtual void StopCaching(void);
     virtual char **GetFileList() = 0;

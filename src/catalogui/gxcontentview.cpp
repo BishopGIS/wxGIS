@@ -3,11 +3,11 @@
  * Purpose:  wxGxContentView class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009-2013 Bishop
+*   Copyright (C) 2009-2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -74,8 +74,8 @@ int wxCALLBACK GxObjectCVCompareFunction(wxIntPtr item1, wxIntPtr item2, wxIntPt
                 return 0;
         }
 
-        bool bContainerDst1 = pGxObject1->IsKindOf(wxCLASSINFO(wxGxDataset));
-        bool bContainerDst2 = pGxObject2->IsKindOf(wxCLASSINFO(wxGxDataset));
+        bool bContainerDst1 = pGxObject1->IsKindOf(wxCLASSINFO(wxGxDataset)) || pGxObject1->IsKindOf(wxCLASSINFO(wxGxDatasetContainer));
+        bool bContainerDst2 = pGxObject2->IsKindOf(wxCLASSINFO(wxGxDataset)) || pGxObject2->IsKindOf(wxCLASSINFO(wxGxDatasetContainer));
         bool bContainer1 = pGxObject1->IsKindOf(wxCLASSINFO(wxGxObjectContainer));
         bool bContainer2 = pGxObject2->IsKindOf(wxCLASSINFO(wxGxObjectContainer));
         if(bContainer1 && !bContainerDst1 && bContainerDst2)
@@ -101,8 +101,8 @@ int wxCALLBACK GxObjectCVCompareFunction(wxIntPtr item1, wxIntPtr item2, wxIntPt
                 return 0;
             else
             {
-                wxGxDataset* pDSt1 = wxDynamicCast(pGxObject1, wxGxDataset);
-                wxGxDataset* pDSt2 = wxDynamicCast(pGxObject2, wxGxDataset);
+                IGxDataset* pDSt1 = dynamic_cast<IGxDataset*>(pGxObject1);
+                IGxDataset* pDSt2 = dynamic_cast<IGxDataset*>(pGxObject2);
                 long diff = long(pDSt1->GetSize().ToULong()) - long(pDSt2->GetSize().ToULong());
                 return diff * (psortdata->bSortAsc == 0 ? -1 : 1);
             }
@@ -117,8 +117,8 @@ int wxCALLBACK GxObjectCVCompareFunction(wxIntPtr item1, wxIntPtr item2, wxIntPt
                 return 0;
             else
             {
-                wxGxDataset* pDSt1 = wxDynamicCast(pGxObject1, wxGxDataset);
-                wxGxDataset* pDSt2 = wxDynamicCast(pGxObject2, wxGxDataset);
+                IGxDataset* pDSt1 = dynamic_cast<IGxDataset*>(pGxObject1);
+                IGxDataset* pDSt2 = dynamic_cast<IGxDataset*>(pGxObject2);
                 return (pDSt1->GetModificationDate() - pDSt2->GetModificationDate()).GetSeconds().ToLong() * (psortdata->bSortAsc == 0 ? -1 : 1);
             }
         }
@@ -165,6 +165,8 @@ wxGxContentView::wxGxContentView(wxWindow* parent, wxWindowID id, const wxPoint&
 wxGxContentView::~wxGxContentView(void)
 {
 	ResetContents();
+
+    DestroyFillMetaThread();
 }
 
 bool wxGxContentView::Create(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name)
@@ -204,6 +206,8 @@ bool wxGxContentView::Create(wxWindow* parent, wxWindowID id, const wxPoint& pos
 
 	SetImageList(&m_ImageListLarge, wxIMAGE_LIST_NORMAL);
 	SetImageList(&m_ImageListSmall, wxIMAGE_LIST_SMALL);
+
+    CreateAndRunFillMetaThread();
 
     return true;
 }
@@ -392,19 +396,14 @@ bool wxGxContentView::AddObject(wxGxObject* const pObject)
 	if(m_current_style == enumGISCVReport)
 	{
 		SetItem(ListItemID, 1, sType);
-        wxGxDataset* pDSet = wxDynamicCast(pObject, wxGxDataset);
+        IGxDataset* pDSet = dynamic_cast<IGxDataset*>(pObject);
         if(pDSet)
         {
-            pDSet->FillMetadata(true);
-            if(pDSet->GetSize() > 0)
-                SetItem(ListItemID, 2, wxFileName::GetHumanReadableSize(pDSet->GetSize()));
-            if(pDSet->GetModificationDate().IsValid())
-                SetItem(ListItemID, 3, pDSet->GetModificationDate().Format()); 
+            wxCriticalSectionLocker locker(m_CritSectFillMeta);
+            m_anFillMetaIDs.Add(pObject->GetId());
         }
 	}
 	SetItemPtrData(ListItemID, (wxUIntPtr) pData);
-
-	//wxListCtrl::Refresh();
 
     return true;
 }
@@ -854,12 +853,21 @@ void wxGxContentView::OnObjectChanged(wxGxCatalogEvent& event)
                     bItemsHaveChanges = true;
                 }
             }
-            wxGxDataset* pDSet = wxDynamicCast(pGxObject, wxGxDataset);
+            IGxDataset* pDSet = dynamic_cast<IGxDataset*>(pGxObject);
             if(pDSet)
             {
-                pDSet->FillMetadata();
-                SetItem(i, 2, wxFileName::GetHumanReadableSize(pDSet->GetSize()));
-                SetItem(i, 3, pDSet->GetModificationDate().Format()); 
+                if (pDSet->IsMetadataFilled())
+                {
+                    if (pDSet->GetSize() > 0)
+                        SetItem(i, 2, wxFileName::GetHumanReadableSize(pDSet->GetSize()));
+                    if (pDSet->GetModificationDate().IsValid())
+                        SetItem(i, 3, pDSet->GetModificationDate().Format()); 
+                }
+                else
+                {
+                    wxCriticalSectionLocker locker(m_CritSectFillMeta);
+                    m_anFillMetaIDs.Add(pGxObject->GetId());
+                }
             }
 	    }
 	}
@@ -969,7 +977,7 @@ void wxGxContentView::OnBeginDrag(wxListEvent& event)
     //TODO: wxDELETE(pDragData) somethere
     wxDataObjectComposite *pDragData = new wxDataObjectComposite();
 
-    wxGISStringDataObject *pNamesData = new wxGISStringDataObject(wxDataFormat(wxT("application/x-vnd.wxgis.gxobject-name")));
+    wxGISStringDataObject *pNamesData = new wxGISStringDataObject(wxDataFormat(wxGIS_DND_NAME));
     pDragData->Add(pNamesData, true);
 
     wxFileDataObject *pFileData = new wxFileDataObject();
@@ -1255,7 +1263,61 @@ wxGxObject* const wxGxContentView::GetParentGxObject(void) const
 bool wxGxContentView::CanPaste()
 {            
     wxClipboardLocker lockClip;
-    return wxTheClipboard->IsSupported(wxDF_FILENAME) | wxTheClipboard->IsSupported(wxDataFormat(wxT("application/x-vnd.wxgis.gxobject-name")));
+    return wxTheClipboard->IsSupported(wxDF_FILENAME) | wxTheClipboard->IsSupported(wxDataFormat(wxGIS_DND_NAME));
     //& wxTheClipboard->IsSupported(wxDF_TEXT); | wxDF_BITMAP | wxDF_TIFF | wxDF_DIB | wxDF_UNICODETEXT | wxDF_HTML
 }
 
+bool wxGxContentView::CreateAndRunFillMetaThread(void)
+{
+    if (CreateThread(wxTHREAD_DETACHED) != wxTHREAD_NO_ERROR)
+    {
+        wxLogError(_("Could not create the thread!"));
+        return false;
+    }
+
+    if (GetThread()->Run() != wxTHREAD_NO_ERROR)
+    {
+        wxLogError(_("Could not run the thread!"));
+        return false;
+    }
+
+    return true;
+}
+
+void wxGxContentView::DestroyFillMetaThread(void)
+{
+    if (GetThread() && GetThread()->IsRunning())
+        GetThread()->Delete();//
+}
+
+wxThread::ExitCode wxGxContentView::Entry()
+{
+    while (!GetThread()->TestDestroy())
+    {
+        long nID = wxNOT_FOUND;
+        m_CritSectFillMeta.Enter();
+        if (m_anFillMetaIDs.GetCount() > 0)
+        {
+            nID = m_anFillMetaIDs[0];
+            m_anFillMetaIDs.RemoveAt(0);
+        }
+        m_CritSectFillMeta.Leave();
+
+        if (nID == wxNOT_FOUND)
+        {
+            wxThread::Sleep(950);
+        }
+        else
+        {
+            IGxDataset* pDSet = dynamic_cast<IGxDataset*>(m_pCatalog->GetRegisterObject(nID));
+            if (NULL != pDSet)
+            {
+                pDSet->FillMetadata(true);
+                m_pCatalog->ObjectChanged(nID);
+            }
+        }
+
+    }
+
+    return (wxThread::ExitCode)wxTHREAD_NO_ERROR;     // success
+}

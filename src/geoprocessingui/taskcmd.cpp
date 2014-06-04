@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -90,9 +90,9 @@ wxString wxGISTaskCmd::GetCaption(void)
 		case 1:
 			return wxString(_("Show execution dialog"));
 		case 2:
-			return wxString(_("Start"));
+			return wxString(_("Start task"));
 		case 3:
-			return wxString(_("Stop"));
+			return wxString(_("Stop task"));
 		default:
 		return wxEmptyString;
 	}
@@ -264,8 +264,11 @@ void wxGISTaskCmd::OnClick(void)
                 {
                     wxGxObject* pGxObject = pCat->GetRegisterObject(pSel->GetSelectedObjectId(i));
                     IGxTask* pGxTask = dynamic_cast<IGxTask*>(pGxObject);
-                    if(pGxTask)
+                    if (pGxTask)
+                    {
                         pGxTask->StartTask();
+//                        wxTheApp->Yield();
+                    }
                 }
             }
 			break;
@@ -276,8 +279,11 @@ void wxGISTaskCmd::OnClick(void)
                 {
                     wxGxObject* pGxObject = pCat->GetRegisterObject(pSel->GetSelectedObjectId(i));
                     IGxTask* pGxTask = dynamic_cast<IGxTask*>(pGxObject);
-                    if(pGxTask)
+                    if (pGxTask)
+                    {
                         pGxTask->StopTask();
+//                        wxTheApp->Yield();
+                    }
                 }
             }
 			break;

@@ -3,11 +3,11 @@
  * Purpose:  symbols for feature renderer
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2013 Bishop
+*   Copyright (C) 2013-2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -23,9 +23,13 @@
 #include "wxgis/display/gisdisplay.h"
 #include "wxgis/display/color.h"
 #include "wxgis/datasource/gdalinh.h"
+#include "wxgis/core/pointer.h"
 
-/** \class wxGISSymbol sumbol.h
-    \brief The interface base class for all symbols
+/** @class wxGISSymbol
+
+    The interface base class for all symbols
+
+    @library{display}
 */
 
 class WXDLLIMPEXP_GIS_DSP wxGISSymbol : 
@@ -46,8 +50,11 @@ protected:
     wxGISDisplay* m_pDisplay;
 };
 
-/** \enum wxGISEnumLineCup symbol.h
-    \brief The line cup styles
+/** @enum wxGISEnumLineCup
+
+    The line cup styles
+
+    @library{display}
  */
 enum wxGISEnumLineCup
 {
@@ -56,8 +63,11 @@ enum wxGISEnumLineCup
 	enumGISLineCupButt
 };
 
-/** \enum wxGISEnumLineJoin symbol.h
-    \brief The line join styles
+/** @enum wxGISEnumLineJoin
+
+    The line join styles
+
+    @library{display}
  */
 enum wxGISEnumLineJoin
 {
@@ -66,8 +76,11 @@ enum wxGISEnumLineJoin
 	enumGISLineJoinRound
 };
 
-/** \class wxGISSimpleLineSymbol sumbol.h
-    \brief The class for simple line symbols
+/** @class wxGISSimpleLineSymbol
+
+    The class for simple line symbols
+
+    @library{display}
 */
 
 class WXDLLIMPEXP_GIS_DSP wxGISSimpleLineSymbol : public wxGISSymbol
@@ -87,7 +100,8 @@ public:
     virtual wxGISEnumLineJoin GetJoin() const;
     virtual void SetJoin(wxGISEnumLineJoin eJoin);
     virtual double GetMiterLimit() const;
-    virtual void SetMiterLimit(double dfMiterLimit);    
+    virtual void SetMiterLimit(double dfMiterLimit);   
+    virtual wxGISSimpleLineSymbol* Clone() const;
 protected:
     double m_dfWidth;
     wxGISEnumLineCup m_eCup;
@@ -95,8 +109,11 @@ protected:
     double m_dfMiterLimit;
 };
 
-/** \enum wxGISEnumFillRule symbol.h
-    \brief The line join styles
+/** @enum wxGISEnumFillRule
+
+    The line join styles
+
+    @library{display}
  */
 enum wxGISEnumFillRule
 {
@@ -104,8 +121,11 @@ enum wxGISEnumFillRule
 	enumGISFillRuleOdd
 };
 
-/** \class wxGISSimpleFillSymbol sumbol.h
-    \brief The class for simple fill symbols
+/** @class wxGISSimpleFillSymbo
+
+    The class for simple fill symbols
+
+    @library{display}
 */
 class WXDLLIMPEXP_GIS_DSP wxGISSimpleFillSymbol : public wxGISSymbol
 {
@@ -120,14 +140,52 @@ public:
     virtual void SetFillRule(wxGISEnumFillRule eFillRule);
     virtual wxGISSimpleLineSymbol *GetSimpleLineSymbol() const;
     virtual void SetSimpleLineSymbol(wxGISSimpleLineSymbol *pLineSymbol);
+    virtual wxGISSimpleFillSymbol* Clone() const;
 protected:
     wxGISSimpleLineSymbol *m_pLineSymbol;
     wxGISEnumFillRule m_eFillRule;
 };
 
+/** @class wxGISSimpleCircleSymbol
 
-/** \class wxGISSimpleMarkerSymbol sumbol.h
-    \brief The class for simple marker symbols
+    The class for simple circle symbols
+
+    @library{display}
+*/
+class WXDLLIMPEXP_GIS_DSP wxGISSimpleCircleSymbol : public wxGISSimpleFillSymbol
+{
+    DECLARE_CLASS(wxGISSimpleCircleSymbol)
+public:
+    wxGISSimpleCircleSymbol();
+    wxGISSimpleCircleSymbol(const wxGISColor& Color, wxGISSimpleLineSymbol *pLineSymbol);
+    virtual ~wxGISSimpleCircleSymbol();
+    virtual void Draw(const wxGISGeometry &Geometry, int nLevel = 0);
+    virtual wxGISSimpleCircleSymbol* Clone() const;
+};
+
+
+/** @class wxGISSimpleEllipseSymbol
+
+    The class for simple ellipse symbols
+
+    @library{display}
+*/
+class WXDLLIMPEXP_GIS_DSP wxGISSimpleEllipseSymbol : public wxGISSimpleFillSymbol
+{
+    DECLARE_CLASS(wxGISSimpleEllipseSymbol)
+public:
+    wxGISSimpleEllipseSymbol();
+    wxGISSimpleEllipseSymbol(const wxGISColor& Color, wxGISSimpleLineSymbol *pLineSymbol);
+    virtual ~wxGISSimpleEllipseSymbol();
+    virtual void Draw(const wxGISGeometry &Geometry, int nLevel = 0);
+    virtual wxGISSimpleEllipseSymbol* Clone() const;
+};
+
+/** @class wxGISSimpleMarkerSymbol
+
+    The class for simple marker symbols
+
+    @library{display}
 */
 class WXDLLIMPEXP_GIS_DSP wxGISSimpleMarkerSymbol : public wxGISSymbol
 {
@@ -143,14 +201,18 @@ public:
     virtual wxGISColor GetOutlineColor() const;
     virtual void SetOutlineSize(double dfSize);
     virtual double GetOutlineSize() const;
+    virtual wxGISSimpleMarkerSymbol* Clone() const;
 protected:
     double m_dfSize, m_dfOutlineSize;
     wxGISColor m_OutlineColor;
 };
 
 
-/** \class wxGISSimpleCollectionSymbol sumbol.h
-    \brief The class for simple geometry collecton symbols
+/** @class wxGISSimpleCollectionSymbol
+
+    The class for simple geometry collecton symbols
+
+    @library{display}
 */
 class WXDLLIMPEXP_GIS_DSP wxGISSimpleCollectionSymbol : public wxGISSymbol
 {
@@ -161,6 +223,10 @@ public:
     virtual ~wxGISSimpleCollectionSymbol();
     virtual void Draw(const wxGISGeometry &Geometry, int nLevel = 0);
     virtual void SetupDisplay(wxGISDisplay* const pDisplay);
+    virtual wxGISSimpleCollectionSymbol* Clone() const;
+    virtual wxGISSimpleMarkerSymbol* GetMarkerSymbol() const;
+    virtual wxGISSimpleLineSymbol* GetLineSymbol() const;
+    virtual wxGISSimpleFillSymbol* GetFillSymbol() const;
 protected:
     wxGISSimpleMarkerSymbol* m_pMarkerSymbol;
     wxGISSimpleLineSymbol* m_pLineSymbol;

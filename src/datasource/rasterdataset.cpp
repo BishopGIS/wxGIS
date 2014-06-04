@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -21,8 +21,11 @@
 #include "wxgis/datasource/rasterdataset.h"
 #include "wxgis/datasource/sysop.h"
 #include "wxgis/datasource/rasterop.h"
+#include "wxgis/core/config.h"
 
 #include <wx/filename.h>
+#include <wx/tokenzr.h>
+
 #include "gdal_rat.h"
 #include "gdalwarper.h"
 
@@ -219,6 +222,34 @@ bool wxGISRasterDataset::Open(bool bReadOnly)
 
 	wxCriticalSectionLocker locker(m_CritSect);
 
+    if (m_nSubType == enumRasterWMSTMS)
+    {
+        CPLSetConfigOption("CPL_CURL_GZIP", "ON");
+        wxGISAppConfig oConfig = GetConfig();
+        if (oConfig.IsOk())
+        {
+            if ( oConfig.GetDebugMode() )
+            {
+                CPLSetConfigOption("CPL_CURL_VERBOSE", "ON");
+            }
+
+            wxString sHeaders = oConfig.Read(enumGISHKCU, wxT("wxGISCommon/curl/headers"), wxEmptyString);
+            wxStringTokenizer tkz(sHeaders, wxT("|"), wxTOKEN_RET_EMPTY);
+            while (tkz.HasMoreTokens())
+            {
+                wxString sUA;
+                wxString token = tkz.GetNextToken();
+                if (token.StartsWith(wxT("User-Agent: "), &sUA))
+                {
+                    //TODO: there is a bug in gdal ignoring GDAL_HTTP_USERAGENT
+                    CPLSetConfigOption("GDAL_HTTP_USERAGENT", sUA.mb_str());
+                    break;
+                }
+            }
+        }
+    }
+
+
 
     m_poDataset = (GDALDataset *) GDALOpenShared( m_sPath, bReadOnly == true ? GA_ReadOnly : GA_Update );
     //bug in FindFileInZip() [gdal-1.6.3\port\cpl_vsil_gzip.cpp]
@@ -342,11 +373,21 @@ bool wxGISRasterDataset::Open(bool bReadOnly)
          }
 
         bHasGeoTransform = true;
-        if ((adfGeoTransform[2] != 0.0 || adfGeoTransform[4] != 0.0 ) || m_poDataset->GetGCPCount() > 0)// adfGeoTransform[1] < 0.0 || adfGeoTransform[5] > 0.0 ||
+        if ((adfGeoTransform[2] != 0.0 || adfGeoTransform[4] != 0.0 ) || (adfGeoTransform[1] < 0.0 || adfGeoTransform[5] > 0.0) || m_poDataset->GetGCPCount() > 0)
         {
             bHasGeoTransform = false;
             m_poMainDataset = m_poDataset;
-            m_poDataset = (GDALDataset *) GDALAutoCreateWarpedVRT( m_poMainDataset, NULL, NULL, GRA_NearestNeighbour, 0.3, NULL );//TODO: get GRA_NearestNeighbour, 0.3 from config
+            
+            wxGISAppConfig oConfig = GetConfig();
+            GDALResampleAlg eAlg = GRA_NearestNeighbour;
+            double dfMaxErr = 0.3;
+            if (oConfig.IsOk())
+            {
+                eAlg = (GDALResampleAlg)oConfig.ReadInt(enumGISHKCU, wxString(wxT("wxGISCommon/raster/resample_alg")), eAlg);
+                dfMaxErr = oConfig.ReadDouble(enumGISHKCU, wxString(wxT("wxGISCommon/raster/max_err")), dfMaxErr);
+            }
+
+            m_poDataset = (GDALDataset *)GDALAutoCreateWarpedVRT(m_poMainDataset, NULL, NULL, eAlg, dfMaxErr, NULL);
             m_poMainDataset->Dereference();
             if(m_poDataset == NULL)
             {

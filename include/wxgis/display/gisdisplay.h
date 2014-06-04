@@ -3,11 +3,11 @@
  * Purpose:  wxGISDisplay class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2011-2013 Bishop
+*   Copyright (C) 2011-2014 Bishop
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -32,8 +32,8 @@
 #endif
 
 #ifdef __WXGTK__
-    #include <gdk/gdk.h>
-	#include <gtk/gtk.h>
+    //#include <gdk/gdk.h>
+    //#include <gtk/gtk.h>
 #endif
 
 WX_DEFINE_ARRAY(wxRealPoint*, wxGISPointsArray);
@@ -62,6 +62,8 @@ public:
 	virtual void SetUpperCachesDerty(size_t nFromCacheNo, bool bIsDerty = true);
 	virtual bool IsDerty(void) const;
     virtual size_t GetCacheCount(void) const {return m_saLayerCaches.size();};
+    virtual void ClearCache(size_t nCacheId);
+
 	//frame
 	virtual void SetDeviceFrame(wxRect &rc);
 	virtual wxRect GetDeviceFrame(void) const;
@@ -93,8 +95,8 @@ public:
     virtual void FillPreserve();
 	virtual void SetColor(double dRed, double dGreen, double dBlue, double dAlpha = 0);
 	virtual bool CheckDrawAsPoint(const OGREnvelope &Envelope, double dfLineWidth, double dOffsetX = 0, double dOffsetY = 0, bool bCheckEnvelope = false);
-    virtual bool CheckDrawAsPoint(const OGRLineString* pLine, double dfLineWidth);
-	virtual bool DrawPoint(double dX, double dY, double dOffsetX = 0, double dOffsetY = 0, double dfRadius = 1.0, double angle1 = 0, double angle2 = 2*M_PI);
+    virtual bool DrawCircle(double dX, double dY, double dOffsetX = 0, double dOffsetY = 0, double dfRadius = 1.0, double angle1 = 0, double angle2 = 2 * M_PI);
+    virtual bool DrawEllipse(double dX, double dY, double dOffsetX = 0, double dOffsetY = 0, double dfWidth = 1.0, double dfHeight = 1.0);
 	virtual bool DrawPointFast(double dX, double dY, double dOffsetX = 0, double dOffsetY = 0);
 	virtual bool DrawLine(OGRRawPoint* pOGRRawPoints, int nPointCount, bool bOwn = true, double dOffsetX = 0, double dOffsetY = 0, bool bIsRing = false);
 	virtual void DrawRaster(cairo_surface_t *surface, const OGREnvelope& Envelope, bool bDrawEnvelope = false);
@@ -143,6 +145,7 @@ protected:
 	bool m_bZeroCacheSet;
 	double m_dFrameRatio;
     double m_dScale;
+    int m_nSysCacheCount;
 
 	//temp cairo for output double buffering
 	cairo_surface_t *m_surface_tmp;

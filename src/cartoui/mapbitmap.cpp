@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -38,6 +38,8 @@ wxGISMapBitmap::wxGISMapBitmap(int nWidth, int nHeight) : wxGISExtentStack()
     m_nHeight = nHeight;
     wxRect rc(0, 0, nWidth, nHeight);
     m_pGISDisplay->SetDeviceFrame(rc);
+
+    m_dfCurrentAngleRad = 0;
 }
 
 wxGISMapBitmap::~wxGISMapBitmap(void)
@@ -75,20 +77,20 @@ bool wxGISMapBitmap::SaveAsBitmap(const CPLString &szPath, wxGISEnumRasterDatase
 
 		if(!pLayer->GetVisible())
 			continue; //not visible
-		if(m_pGISDisplay->IsCacheDerty(pLayer->GetCacheID()))
+		if(m_pGISDisplay->IsCacheDerty(pLayer->GetCacheId()))
 		{
 			//erase bk if layer no 0
 			if(i == 0)
 				m_pGISDisplay->OnEraseBackground();
 
-			if(m_pGISDisplay->GetDrawCache() != pLayer->GetCacheID())
+			if(m_pGISDisplay->GetDrawCache() != pLayer->GetCacheId())
             {
-				m_pGISDisplay->SetDrawCache(pLayer->GetCacheID());
+				m_pGISDisplay->SetDrawCache(pLayer->GetCacheId());
             }
 
             if (pLayer->Draw(wxGISDPGeography, m_pTrackCancel))
             {
-                m_pGISDisplay->SetCacheDerty(pLayer->GetCacheID(), false);
+                m_pGISDisplay->SetCacheDerty(pLayer->GetCacheId(), false);
             }
 		}
 	}
@@ -152,9 +154,9 @@ bool wxGISMapBitmap::AddLayer(wxGISLayer* pLayer)
     wxCHECK_MSG(pLayer, false, wxT("The layer pointer is NULL"));
 	//Create cache if needed
 	if(pLayer->IsCacheNeeded())
-		pLayer->SetCacheID(m_pGISDisplay->AddCache());
+		pLayer->SetCacheId(m_pGISDisplay->AddCache());
 	else
-		pLayer->SetCacheID(m_pGISDisplay->GetLastCacheID());
+		pLayer->SetCacheId(m_pGISDisplay->GetLastCacheID());
 
 	return wxGISExtentStack::AddLayer(pLayer);
 }

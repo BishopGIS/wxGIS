@@ -3,11 +3,11 @@
  * Purpose:  key code input dialog class.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009-2010  Bishop
+*   Copyright (C) 2009-2010,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -20,11 +20,10 @@
  ****************************************************************************/
 #include "wxgis/framework/keycodedlg.h"
 
-///////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------------
 /// Class wxKeyCodeCtrl
-///////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------------
+
 BEGIN_EVENT_TABLE(wxKeyCodeCtrl, wxTextCtrl)
     EVT_CHAR(wxKeyCodeCtrl::OnChar)
 	EVT_KEY_DOWN(wxKeyCodeCtrl::OnChar)
@@ -106,9 +105,10 @@ void wxKeyCodeCtrl::OnChar(wxKeyEvent& event)
 }
 
 
-///////////////////////////////////////////////////////////////////////////////
-/// Class wxKeyCodeDlg
-///////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------------
+// Class wxKeyCodeDlg
+//---------------------------------------------------------------------------------
+
 BEGIN_EVENT_TABLE(wxKeyCodeDlg, wxDialog)
 	EVT_UPDATE_UI(wxID_OK, wxKeyCodeDlg::OnUpdateUI)
 END_EVENT_TABLE()
@@ -127,7 +127,7 @@ wxKeyCodeDlg::wxKeyCodeDlg( wxWindow* parent, wxWindowID id, const wxString& tit
 	m_button = new wxButton( this, wxID_OK, _("OK"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer1->Add( m_button, 0, wxALL, 5 );
 	
-	this->SetSizer( bSizer1 );
+    this->SetSizerAndFit(bSizer1);
 	this->Layout();
 	
 	this->Centre( wxBOTH );

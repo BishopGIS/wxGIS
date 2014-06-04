@@ -3,11 +3,11 @@
  * Purpose:  FeatureLayer header.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009,2011,2013 Bishop
+*   Copyright (C) 2009,2011,2013,2014 Bishop
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -20,14 +20,6 @@
  ****************************************************************************/
 #include "wxgis/carto/featurelayer.h"
 #include "wxgis/carto/mxevent.h"
-
-
-//#include "wxgis/display/displaytransformation.h"
-//#include "wxgis/geometry/algorithm.h"
-//#include "wxgis/datasource/spvalidator.h"
-//#include "wxgis/framework/application.h"
-//#include "wxgis/carto/transformthreads.h"
-//#include <wx/stopwatch.h>
 
 #define STEP 3.0
 #define NOCACHEVAL 2000
@@ -58,35 +50,10 @@ wxGISFeatureLayer::wxGISFeatureLayer(const wxString &sName, wxGISDataset* pwxGIS
 
         m_SpatialReference = m_pwxGISFeatureDataset->GetSpatialReference();
 		m_FullEnvelope = m_pwxGISFeatureDataset->GetEnvelope();
-		//m_PreviousEnvelope = m_FullEnvelope;
 
-            //create new renderer
+        //create new renderer
         m_pFeatureRenderer = new wxGISFeatureRenderer(this);
 		m_pRenderer = wxStaticCast(m_pFeatureRenderer, wxGISRenderer);
-
- //   wxGISUniqueValueRenderer* pRenderer = new wxGISUniqueValueRenderer(this);
-
- //   wxGISSimpleFillSymbol* pFill1 = new wxGISSimpleFillSymbol(wxColor(0,0,255,0), new wxGISSimpleLineSymbol(wxColor(0,0,255,255), 1)); //blue
- //   pRenderer->AddValue(0, wxT("QB02"), wxStaticCast(pFill1, wxGISSymbol));
-
- //   wxGISSimpleFillSymbol* pFill2 = new wxGISSimpleFillSymbol(wxColor(0,0,255,0), new wxGISSimpleLineSymbol(wxColor(255,255,0,255), 1)); //yellow
- //   pRenderer->AddValue(0, wxT("WV01"), wxStaticCast(pFill2, wxGISSymbol));
-
- //   wxGISSimpleFillSymbol* pFill3 = new wxGISSimpleFillSymbol(wxColor(0,0,255,0), new wxGISSimpleLineSymbol(wxColor(255,0,255,255), 1)); //magenta
- //   pRenderer->AddValue(0, wxT("WV02"), wxStaticCast(pFill3, wxGISSymbol));
-
- //   wxGISSimpleFillSymbol* pFill4 = new wxGISSimpleFillSymbol(wxColor(0,0,255,0), new wxGISSimpleLineSymbol(wxColor(255,0,0,255), 1)); //red
- //   pRenderer->AddValue(0, wxT("IK-2"), wxStaticCast(pFill4, wxGISSymbol));
-
- //   wxGISSimpleFillSymbol* pFill5 = new wxGISSimpleFillSymbol(wxColor(0,0,255,0), new wxGISSimpleLineSymbol(wxColor(0,255,0,255), 1)); //green
- //   pRenderer->AddValue(0, wxT("GE-1"), wxStaticCast(pFill5, wxGISSymbol));
-
-
- //   wxGISSimpleFillSymbol* pFill6 = new wxGISSimpleFillSymbol(wxColor(0,0,255,0), new wxGISSimpleLineSymbol(wxColor(128,128,128,255), 1)); //grey
- //   pRenderer->SetSymbol(wxStaticCast(pFill6, wxGISSymbol));
-
- //   m_pFeatureRenderer = wxStaticCast(pRenderer, wxGISFeatureRenderer);
-	//m_pRenderer = wxStaticCast(pRenderer, wxGISRenderer);
 
         m_nConnectionPointDSCookie = m_pwxGISFeatureDataset->Advise(this);
 	}
@@ -286,8 +253,9 @@ wxGISSpatialTreeCursor wxGISFeatureLayer::Idetify(const wxGISGeometry &Geom)
 
 void wxGISFeatureLayer::OnDSClosed(wxFeatureDSEvent& event)
 {
-	wxDELETE(m_pSpatialTree);
-    AddEvent(wxMxMapViewEvent(wxMXMAP_LAYER_DS_CLOSED, GetCacheID()));
+    wxDELETE(m_pSpatialTree);
+    wxMxMapViewEvent wxMxMapViewEvent_(wxMXMAP_LAYER_DS_CLOSED, GetId());
+    AddEvent(wxMxMapViewEvent_);
 }
 
 void wxGISFeatureLayer::OnDSFeaturesAdded(wxFeatureDSEvent& event)
@@ -324,7 +292,8 @@ void wxGISFeatureLayer::OnDSFeaturesAdded(wxFeatureDSEvent& event)
         m_pFeatureRenderer->Draw(event.GetCursor(), wxGISDPGeography, m_pDisplay);
     }
     //send event that layer is changed and redraw needed to upper layers and whole map
-    AddEvent(wxMxMapViewEvent(wxMXMAP_LAYER_LOADING, GetCacheID()));
+    wxMxMapViewEvent wxMxMapViewEvent_(wxMXMAP_LAYER_LOADING, GetId());
+    AddEvent(wxMxMapViewEvent_);
 }
 
 void wxGISFeatureLayer::OnDSFeatureAdded(wxFeatureDSEvent& event)
@@ -362,7 +331,8 @@ void wxGISFeatureLayer::OnDSFeatureAdded(wxFeatureDSEvent& event)
         m_pFeatureRenderer->FeatureChanged(Feature);
     }
 
-    AddEvent(wxMxMapViewEvent(wxMXMAP_LAYER_CHANGED, GetCacheID()));
+    wxMxMapViewEvent wxMxMapViewEvent_(wxMXMAP_LAYER_CHANGED, GetId());
+    AddEvent(wxMxMapViewEvent_);
 }
 
 void wxGISFeatureLayer::OnDSFeatureDeleted(wxFeatureDSEvent& event)
@@ -371,12 +341,14 @@ void wxGISFeatureLayer::OnDSFeatureDeleted(wxFeatureDSEvent& event)
     {
         m_pSpatialTree->Remove(event.GetFID());
     }
-    AddEvent(wxMxMapViewEvent(wxMXMAP_LAYER_CHANGED, GetCacheID()));
+
+    wxMxMapViewEvent wxMxMapViewEvent_(wxMXMAP_LAYER_CHANGED, GetId());
+    AddEvent(wxMxMapViewEvent_);
 }
 
 void wxGISFeatureLayer::OnDSFeatureChanged(wxFeatureDSEvent& event)
 {
-    wxLogDebug(wxT("changed: %d"), event.GetFID());
+    //wxLogDebug(wxT("changed: %d"), event.GetFID());
     wxGISFeature Feature = m_pwxGISFeatureDataset->GetFeatureByID(event.GetFID());
     if(m_pSpatialTree)
     {
@@ -407,21 +379,22 @@ void wxGISFeatureLayer::OnDSFeatureChanged(wxFeatureDSEvent& event)
         m_pFeatureRenderer->FeatureChanged(Feature);
     }
 
-    AddEvent(wxMxMapViewEvent(wxMXMAP_LAYER_CHANGED, GetCacheID()));
+    wxMxMapViewEvent wxMxMapViewEvent_(wxMXMAP_LAYER_CHANGED, GetId());
+    AddEvent(wxMxMapViewEvent_);
 }
 
 void wxGISFeatureLayer::SetSpatialReference(const wxGISSpatialReference &SpatialReference)
 {
+    if(m_SpatialReference->IsSame(SpatialReference))
+        return;
+    m_SpatialReference = SpatialReference;
     m_FullEnvelope = m_pwxGISFeatureDataset->GetEnvelope();
     //delete previous quadtree
     if(m_pSpatialTree)
     {
         wxDELETE(m_pSpatialTree);
     }    
-    if(m_SpatialReference->IsSame(SpatialReference))
-        return;
 
-    m_SpatialReference = SpatialReference;
     wxGISGeometry newGeom = EnvelopeToGeometry(m_FullEnvelope, m_pwxGISFeatureDataset->GetSpatialReference());
     if(newGeom.IsOk() && newGeom.Project(SpatialReference))
     {

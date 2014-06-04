@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -24,7 +24,7 @@
 #include "wxgis/catalog/gxdataset.h"
 #include "wxgis/catalogui/gxcatalogui.h"
 #include "wxgis/catalogui/gxeventui.h"
-#include "wxgis/cartoui/mapview.h"
+#include "wxgis/cartoui/drawingmap.h"
 #include "wxgis/core/format.h"
 #include "wxgis/framework/statusbar.h"
 #include "wxgis/catalogui/gxapplication.h"
@@ -66,7 +66,7 @@ protected:
  */
 
 class WXDLLIMPEXP_GIS_CLU wxGxMapView :
-	public wxGISMapView,
+    public wxGISDrawingMapView,
 	public wxGxView
 {
     DECLARE_DYNAMIC_CLASS(wxGxMapView)
@@ -85,7 +85,9 @@ public:
 	virtual bool Activate(IApplication* const pApplication, wxXmlNode* const pConf);
 	virtual void Deactivate(void);
 	virtual bool Applies(wxGxSelection* const Selection);
-//events
+    //wxGxView
+    virtual void OnShow(bool bShow);
+    //events
 	virtual void OnSelectionChanged(wxGxSelectionEvent& event);
 protected:
     virtual void LoadData(long nGxObjectId);
@@ -101,6 +103,8 @@ protected:
 
 	wxGISStatusBar* m_pStatusBar;
 	wxGxApplication* m_pApp;
+
+    long m_nPanCmdId;
 
 	wxGISCoordinatesFormat m_CFormat;
 private:

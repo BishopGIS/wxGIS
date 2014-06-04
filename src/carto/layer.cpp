@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -33,7 +33,8 @@ wxGISLayer::wxGISLayer(const wxString &sName, wxGISDataset* pwxGISDataset)
     m_dMaxScale = wxNOT_FOUND;
     m_dMinScale = wxNOT_FOUND;
     m_bVisible = true;
-    m_nCacheID = 0;
+    m_nCacheId = 0;
+    m_nId = wxNOT_FOUND;
 
     if(m_pwxGISDataset)
     {
@@ -59,7 +60,9 @@ const wxGISSpatialReference wxGISLayer::GetSpatialReference(void)
 
 void wxGISLayer::SetSpatialReference(const wxGISSpatialReference &SpatialReference)
 {
-    if(m_SpatialReference->IsSame(SpatialReference))
+    if (!SpatialReference.IsOk())
+        return;
+    if (m_SpatialReference.IsOk() && m_SpatialReference->IsSame(SpatialReference))
         return;
     m_SpatialReference = SpatialReference;
 }
@@ -70,6 +73,11 @@ OGREnvelope wxGISLayer::GetEnvelope(void) const
 }
 
 bool wxGISLayer::IsValid(void) const
+{
+	return true;
+}
+
+bool wxGISLayer::IsCacheNeeded(void) const
 {
 	return true;
 }
@@ -91,4 +99,14 @@ void wxGISLayer::SetRenderer(wxGISRenderer* pRenderer)
 wxGISRenderer* wxGISLayer::GetRenderer(void)
 {
     return m_pRenderer;
+}
+
+short wxGISLayer::GetId() const
+{
+    return m_nId;
+}
+
+void wxGISLayer::SetId(short nNewId)
+{
+    m_nId = nNewId;
 }

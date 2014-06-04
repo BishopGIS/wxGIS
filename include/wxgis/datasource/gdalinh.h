@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -86,7 +86,7 @@ class WXDLLIMPEXP_GIS_DS wxGISFeature : public wxObject
 {
     DECLARE_CLASS(wxGISFeature)
 public:
-    wxGISFeature(OGRFeature *poFeature = NULL, const wxFontEncoding &oEncoding = wxLocale::GetSystemEncoding());
+    wxGISFeature(OGRFeature *poFeature = NULL, const wxFontEncoding &oEncoding = wxLocale::GetSystemEncoding(), bool bRecodeToSystem = false);
 
     bool IsOk() const;
 
@@ -140,6 +140,7 @@ public:
     OGRErr SetGeometryDirectly(const wxGISGeometry &Geom);
     void SetStyleString(const wxString &sStyle);
     void StealGeometry(void);
+    void SetEncoding(const wxFontEncoding &eEnc, bool bRecodeToSystem = false);
 protected:
     inline wxString EncodeString(const char* psz, wxFontEncoding oEncoding) const
     {
@@ -249,10 +250,11 @@ class wxGISFeatureRefData : public wxObjectRefData
 {
     friend class wxGISFeature;
 public:
-    wxGISFeatureRefData(OGRFeature *poFeature = NULL, const wxFontEncoding &oEncoding = wxLocale::GetSystemEncoding())
+    wxGISFeatureRefData(OGRFeature *poFeature = NULL, const wxFontEncoding &oEncoding = wxLocale::GetSystemEncoding(), bool bRecodeToSystem = false)
     {
         m_poFeature = poFeature;
         m_oEncoding = oEncoding;
+        m_bRecodeToSystem = bRecodeToSystem;
     }
 
     virtual ~wxGISFeatureRefData(void)
@@ -266,6 +268,7 @@ public:
     {
         m_poFeature = data.m_poFeature;
         m_oEncoding = data.m_oEncoding;
+        m_bRecodeToSystem = data.m_bRecodeToSystem;
     }
 
     bool operator == (const wxGISFeatureRefData& data) const
@@ -273,9 +276,16 @@ public:
         return m_poFeature == data.m_poFeature;
     }
 
+    void SetEncoding(const wxFontEncoding &eEnc, bool bRecodeToSystem = false)
+    {
+        m_oEncoding = eEnc;
+        m_bRecodeToSystem = bRecodeToSystem;
+    }
+
 protected:
 	OGRFeature *m_poFeature;
     wxFontEncoding m_oEncoding;
+    bool m_bRecodeToSystem;
 };
 
 /** \class wxGISGeometry gdalinh.h
@@ -309,6 +319,7 @@ public:
     bool Project(const wxGISSpatialReference &SpaRef);
     bool Project(OGRCoordinateTransformation* const poCT);
     OGRwkbGeometryType GetType() const;
+    wxGISGeometry Clone() const;
 protected:
     virtual wxObjectRefData *CreateRefData() const;
     virtual wxObjectRefData *CloneRefData(const wxObjectRefData *data) const;    

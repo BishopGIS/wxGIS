@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -52,7 +52,11 @@ public:
 	}
 	wxFeatureDSEvent(const wxFeatureDSEvent& event) : wxEvent(event)
 	{
-        m_Cursor = event.m_Cursor;
+        for (size_t i = 0; i < event.m_Cursor.GetCount(); ++i)
+        {
+            if (event.m_Cursor[i])
+                m_Cursor.Add(event.m_Cursor[i]->Clone());
+        }
         m_nFid = event.m_nFid;
 	}
 

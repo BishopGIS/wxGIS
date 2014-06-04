@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -46,14 +46,14 @@ wxGISCommand::~wxGISCommand(void)
 {
 }
 
-void wxGISCommand::SetID(long nID)
+void wxGISCommand::SetId(long nId)
 {
-    m_CommandID = nID;
+    m_CommandId = nId;
 }
 
-long wxGISCommand::GetID(void) const 
+long wxGISCommand::GetId(void) const 
 {
-    return m_CommandID;
+    return m_CommandId;
 }
 
 void wxGISCommand::SetSubType(unsigned char SubType)

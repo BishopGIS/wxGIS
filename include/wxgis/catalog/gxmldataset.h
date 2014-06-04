@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -25,8 +25,11 @@
 #include "wxgis/catalog/gxdataset.h"
 #include "wxgis/datasource/dataset.h"
 
-/** \class wxGxMLDataset gxmldataset.h
-    \brief A markup language GxObject.
+/** @class wxGxMLDataset
+
+    A markup language GxObject.
+
+    @library{catalog}
 */
 
 class WXDLLIMPEXP_GIS_CLT wxGxMLDataset :
@@ -58,8 +61,11 @@ protected:
 	wxGISEnumVectorDatasetType m_eType;
 };
 
-/** \class wxGxMLSubDataset gxmldataset.h
-    \brief A ml layer GxObject.
+/** @class wxGxMLSubDataset
+
+    A markup language layer GxObject.
+
+    @library{catalog}
 */
 
 class WXDLLIMPEXP_GIS_CLT wxGxMLSubDataset :

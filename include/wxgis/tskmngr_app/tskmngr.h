@@ -1,13 +1,13 @@
 /******************************************************************************
  * Project:  wxGIS (Task Manager)
  * Purpose:  Task manager class.
- * Author:   Bishop (aka Barishnikov Dmitriy), polimax@mail.ru
+ * Author:   Dmitry Barishnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2012-2013 Bishop
+*   Copyright (C) 2012-2013 Dmitry Barishnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -34,8 +34,9 @@
 class wxGISTaskCategory;
 WX_DECLARE_STRING_HASH_MAP(wxGISTaskCategory*, wxGISTaskCategoryMap);
 
-/** \class wxGISTaskManager tskmngr.h
-    \brief The main task manager class.
+/** @class wxGISTaskManager
+
+    The main task manager class.
 */
 
 class wxGISTaskManager : 
@@ -55,7 +56,7 @@ public:
     virtual int GetExecTaskCount(void) const;
     virtual int GetMaxExecTaskCount(void) const;
     virtual void SetMaxExecTaskCount(int nMaxExecTasks);
-
+    virtual void OnCategoryExecutionFinished(const wxGISTaskCategory* pCat);
     //INetEventProcessor
     virtual void ProcessNetEvent(wxGISNetEvent& event);
 protected:
@@ -64,17 +65,6 @@ protected:
     virtual void OnExit(void);
     virtual wxJSONValue GetChildrenAsJSON(wxJSONValue &val);
     virtual wxJSONValue GetParamsAsJSON(wxJSONValue &val);
-
-    //bool AddTask(const wxXmlNode* pTaskNode, int nId, wxString &sErrMsg);
-    //bool DelTask(const wxXmlNode* pTaskNode, int nId, wxString &sErrMsg);
-    //bool ChangeTask(const wxXmlNode* pTaskNode, int nId, wxString &sErrMsg);
-    //bool StartTask(const wxXmlNode* pTaskNode, int nId, wxString &sErrMsg);
-    //bool StopTask(const wxXmlNode* pTaskNode, int nId, wxString &sErrMsg);
-    ////bool ChangeTasksPriority(const wxXmlNode* pTaskNode, int nId, wxString &sErrMsg); TODO:
-    //bool GetTasks(const wxXmlNode* pTaskNode, int nId, wxString &sErrMsg);
-    //void GetTaskDetails(const wxXmlNode* pTaskNode, int nId);
-    //bool ValidateTask(const wxXmlNode* pTaskNode);
-    //int GetNewId(void);
     virtual wxString GetNewStorePath(const wxString &sAddToName, const wxString &sSubDir = wxEmptyString);
     static wxString ReplaceForbiddenCharsInFileName(const wxString &name, const wxString &ch = wxT("_") );
 protected:
@@ -83,10 +73,5 @@ protected:
     wxString m_sUserConfigDir;
     wxGISTaskCategoryMap m_omCategories;
     int m_nMaxExecTasks;
- //   wxFFile m_LogFile;
- //   wxLocale* m_pLocale; // locale we'll be using
-	////char* m_pszOldLocale;
- //   wxCriticalSection m_TaskLock;
- //   wxCriticalSection m_CounterLock;
- //   int m_nIdCounter;
+    bool m_bExitState;
 };

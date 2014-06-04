@@ -3,11 +3,11 @@
  * Purpose:  add command in command bar dialog.
  * Author:   Dmitry Baryshnikov (aka Bishop), polimax@mail.ru
  ******************************************************************************
-*   Copyright (C) 2009-2010,2013  Bishop
+*   Copyright (C) 2009-2010,2013,2014 Dmitry Baryshnikov
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -82,7 +82,7 @@ wxGISAddCommandDlg::wxGISAddCommandDlg( wxGISApplication* pGxApp, wxWindow* pare
 
 	bSizer5->Add( m_sdbSizer, 0, wxALL|wxEXPAND, 5 );
 
-	this->SetSizer( bSizer5 );
+	this->SetSizerAndFit( bSizer5 );
 	this->Layout();
 
 	m_ListBox->Select(0);
@@ -155,11 +155,11 @@ void wxGISAddCommandDlg::OnListboxSelect(wxCommandEvent& event)
 	{
 		wxString sName = wxStripMenuCodes(CommandArr[i]->GetCaption());
 		wxString sMessage = CommandArr[i]->GetMessage();
-		wxString sKeyCode = m_pGxApp->GetGISAcceleratorTable()->GetText(CommandArr[i]->GetID());
+		wxString sKeyCode = m_pGxApp->GetGISAcceleratorTable()->GetText(CommandArr[i]->GetId());
 		long pos = m_ListCtrl->InsertItem(i, sName);
 		m_ListCtrl->SetItem(pos, 1, sMessage);
 		m_ListCtrl->SetItem(pos, 2, sKeyCode);
-		m_ListCtrl->SetItemData(pos,  CommandArr[i]->GetID());
+		m_ListCtrl->SetItemData(pos,  CommandArr[i]->GetId());
 		wxIcon oIcon = CommandArr[i]->GetBitmap();
 		if(oIcon.IsOk())
 		{

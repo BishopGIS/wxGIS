@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -35,7 +35,8 @@ enum wxGISEnumDatasetType
 	enumGISFeatureDataset = 1,
 	enumGISTableDataset = 2,
 	enumGISRasterDataset = 3,
-	enumGISContainer = 4
+	enumGISContainer = 4,
+    enumGISDrawing = 5
 };
 
 /** \enum wxGISEnumVectorDatasetType
@@ -56,6 +57,8 @@ enum wxGISEnumVectorDatasetType
     enumVecWFS,
     enumVecMem,
     enumVecSXF,
+    enumVecS57,
+    enumVecFileDBLayer,
     enumVecMAX
 };
 
@@ -77,6 +80,7 @@ enum wxGISEnumRasterDatasetType
     enumRasterWMS,
     enumRasterWMSTMS,
     enumRasterPostGIS,
+    enumRasterFileDBLayer,
     enumRasterMAX
 };
 
@@ -92,6 +96,7 @@ enum wxGISEnumTableDatasetType
     enumTableMapinfoTab,
     enumTableMapinfoMif,
     enumTableCSV,
+    enumTableFileDBLayer,
     enumTableMAX
 };
 

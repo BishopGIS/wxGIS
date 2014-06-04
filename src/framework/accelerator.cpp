@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -53,7 +53,7 @@ wxGISAcceleratorTable::wxGISAcceleratorTable(wxGISApplicationBase* pApp) : bHasC
                 wxDword Flags = GetFlags(sFlags);
 				wxString sKey = child->GetAttribute(wxT("keycode"), wxT("A"));
 				int nKey = GetKeyCode(sKey);
-				Add(wxAcceleratorEntry(Flags, nKey, pCmd->GetID()));
+				Add(wxAcceleratorEntry(Flags, nKey, pCmd->GetId()));
 			}
 			child = child->GetNext();
 		}
@@ -72,7 +72,7 @@ wxGISAcceleratorTable::wxGISAcceleratorTable(wxGISApplicationBase* pApp) : bHasC
                 wxDword Flags = GetFlags(sFlags);
 				wxString sKey = child->GetAttribute(wxT("keycode"), wxT("A"));
 				int nKey = GetKeyCode(sKey);
-				Add(wxAcceleratorEntry(Flags, nKey, pCmd->GetID()));
+				Add(wxAcceleratorEntry(Flags, nKey, pCmd->GetId()));
 			}
 			child = child->GetNext();
 		}

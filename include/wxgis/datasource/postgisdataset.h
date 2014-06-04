@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -24,13 +24,68 @@
 
 #ifdef wxGIS_USE_POSTGRES
 
-#include "gdal/ogr_pg.h"
-
+//#include "gdal/ogr_pg.h"
+#include "libpq-fe.h"
 #include "wxgis/datasource/featuredataset.h"
 #include "wxgis/datasource/filter.h"
 
-/** \class wxGISPostgresDataSource postgisdataset.h
-    \brief The PostGIS DataSource class.
+class OGRPGDataSource : public OGRDataSource
+{
+    typedef struct
+    {
+        int nMajor;
+        int nMinor;
+        int nRelease;
+    } PGver;
+
+    void   **papoLayers;
+    int                 nLayers;
+
+    char               *pszName;
+    char               *pszDBName;
+
+    int                 bDSUpdate;
+    int                 bHavePostGIS;
+    int                 bHaveGeography;
+
+    int                 nSoftTransactionLevel;
+
+    PGconn              *hPGConn;
+
+    int                 DeleteLayer(int iLayer);
+
+    Oid                 nGeometryOID;
+    Oid                 nGeographyOID;
+
+    // We maintain a list of known SRID to reduce the number of trips to
+    // the database to get SRSes.
+    int                 nKnownSRID;
+    int                 *panSRID;
+    OGRSpatialReference **papoSRS;
+
+    void     *poLayerInCopyMode;
+
+    CPLString           osCurrentSchema;
+
+    int                 nUndefinedSRID;
+
+public:
+    PGver               sPostgreSQLVersion;
+    PGver               sPostGISVersion;
+
+    int                 bUseBinaryCursor;
+    int                 bBinaryTimeFormatIsInt8;
+    int                 bUseEscapeStringSyntax;
+
+public:
+    PGconn              *GetPGConn() { return hPGConn; }
+};
+
+/** @class wxGISPostgresDataSource
+
+    The PostGIS DataSource class.
+
+    @library{datasource}
 */
 class WXDLLIMPEXP_GIS_DS wxGISPostgresDataSource :
 	public wxGISDataset
@@ -47,18 +102,20 @@ public:
     virtual wxGISDataset* GetSubset(size_t nIndex);
     virtual wxGISDataset* GetSubset(const wxString &sTableName);
     virtual wxString GetName(void) const;
-    virtual bool Open(int bUpdate = FALSE);
+    virtual bool Open(int bUpdate = TRUE);
 	//wxGISPostGISDataset
-    wxGISDataset* ExecuteSQL(const wxString &sStatement, const wxString &sDialect = wxT("OGRSQL"));
+    bool ExecuteSQL(const wxString &sStatement);
+    bool CreateDatabase(const wxString &sDBName, const wxString &sTemplate = wxT("template_postgis"), const wxString &sOwner = wxT("postgres"), const wxString &sEncoding = wxT("UTF8"));
+    wxGISDataset* ExecuteSQL2(const wxString &sStatement, const wxString &sDialect = wxT("OGRSQL"));
     //the geometry in spatial filter should have the same SpaRef as the target layer 
-    wxGISDataset* ExecuteSQL(const wxGISSpatialFilter &SpatialFilter, const wxString &sDialect = wxT("OGRSQL"));
-    bool PGExecuteSQL(const wxString &sStatement);
+    wxGISDataset* ExecuteSQL2(const wxGISSpatialFilter &SpatialFilter, const wxString &sDialect = wxT("OGRSQL"));
+
+    //bool PGExecuteSQL(const wxString &sStatement);
     bool CreateSchema(const wxString &sSchemaName);
     bool DeleteSchema(const wxString &sSchemaName);
     bool RenameSchema(const wxString &sSchemaName, const wxString &sSchemaNewName);
     bool RenameTable(const wxString &sSchemaName, const wxString &sTableName, const wxString &sTableNewName);
     bool MoveTable(const wxString &sTableName, const wxString &sSchemaName, const wxString &sSchemaNewName);
-    //wxGISDataset* PGExecuteSQL( const wxString &sStatement, bool bMultipleCommandAllowed = FALSE );
     //wxGISDataset
 	virtual bool Rename(const wxString &sNewName);
 	virtual bool Copy(const CPLString &szDestPath, ITrackCancel* const pTrackCancel = NULL);
@@ -70,16 +127,7 @@ public:
     virtual wxFontEncoding GetEncoding() const { return m_Encoding; };
     static wxString NormalizeTableName(const wxString &sSrcName);
 protected:    
-    inline void OGRPGClearResult( PGresult*& hResult )
-    {
-        if( NULL != hResult )
-        {
-            PQclear( hResult );
-            hResult = NULL;
-        }
-    }
-    PGresult *OGRPG_PQexec(PGconn *conn, const char *query, int bMultipleCommandAllowed = FALSE);
-	wxGISDataset* GetDatasetFromOGRLayer(int iLayer, const CPLString &sPath, OGRLayer* poLayer);
+	wxGISDataset* GetDatasetFromOGRLayer(const CPLString &sPath, OGRLayer* poLayer);
 protected:
 	OGRDataSource *m_poDS;
 	OGRDataSource *m_poDS4SQL;
@@ -88,21 +136,24 @@ protected:
     wxFontEncoding m_Encoding;
 };
 
-/** \class wxGISPostgresDataSource postgisdataset.h
-    \brief The PostGIS DataSource class.
+/** @class wxGISPostgresFeatureDataset
+
+    The PostGIS Feature dataset class.
+
+    @library{datasource}
 */
 class WXDLLIMPEXP_GIS_DS wxGISPostgresFeatureDataset :
 	public wxGISFeatureDataset
 {
     DECLARE_CLASS(wxGISPostgresFeatureDataset)
 public:
-	wxGISPostgresFeatureDataset(int iLayer, const CPLString &sPath, OGRLayer* poLayer = NULL, OGRDataSource* poDS = NULL);
+    wxGISPostgresFeatureDataset(const CPLString &sPath, OGRLayer* poLayer = NULL, OGRDataSource* poDS = NULL);
 	virtual ~wxGISPostgresFeatureDataset(void);
     //wxGISDataset
     virtual bool CanDelete(void);
     virtual bool Delete(ITrackCancel* const pTrackCancel = NULL);
 protected:
-    int m_iLayer;
+    CPLString m_sLayerName;
 };
 
 #endif //wxGIS_USE_POSTGRES

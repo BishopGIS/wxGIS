@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -100,6 +100,10 @@ bool FolderDrop(const CPLString& pPath, const wxArrayString& GxObjectPaths, bool
 {
     if(GxObjectPaths.GetCount() == 0)
         return false;
+
+    //TODO: check input object type and output object type
+    //if different types - export
+    //dialog with wxGIS and choices for output types (raster and vector data) 
 
     //create progress dialog
     wxString sTitle = wxString::Format(_("%s %d objects (files)"), bMove == true ? _("Move") : _("Copy"), GxObjectPaths.GetCount());

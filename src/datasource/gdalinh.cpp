@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -19,7 +19,7 @@
 *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ****************************************************************************/
 #include "wxgis/datasource/gdalinh.h"
-
+#include <wx/encconv.h>
 //-----------------------------------------------------------------------------
 // wxGISSpatialReference
 //-----------------------------------------------------------------------------
@@ -143,9 +143,10 @@ WX_DEFINE_USER_EXPORTED_OBJARRAY(wxGISFeatureArray);
 
 IMPLEMENT_CLASS(wxGISFeature, wxObject)
 
-wxGISFeature::wxGISFeature(OGRFeature *poFeature, const wxFontEncoding &oEncodingS)
+wxGISFeature::wxGISFeature(OGRFeature *poFeature, const wxFontEncoding &oEncodingS, bool bRecodeToSystem)
 {
-    m_refData = new wxGISFeatureRefData(poFeature, oEncodingS);
+    if (poFeature != NULL)
+        m_refData = new wxGISFeatureRefData(poFeature, oEncodingS, bRecodeToSystem);
 }
 
 wxObjectRefData *wxGISFeature::CreateRefData() const
@@ -180,13 +181,13 @@ wxGISFeature::operator OGRFeature*() const
 
 OGRErr wxGISFeature::SetFID(long nFID)
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, OGRERR_INVALID_HANDLE, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, OGRERR_INVALID_HANDLE, wxT("The OGRFeature pointer is null"));
     return ((wxGISFeatureRefData *)m_refData)->m_poFeature->SetFID(nFID);
 }
 
 long wxGISFeature::GetFID(void) const
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, OGRERR_INVALID_HANDLE, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, OGRERR_INVALID_HANDLE, wxT("The OGRFeature pointer is null"));
     return ((wxGISFeatureRefData *)m_refData)->m_poFeature->GetFID();
 }
 
@@ -211,13 +212,13 @@ wxDateTime wxGISFeature::GetFieldAsDateTime(int nIndex) const
 
 int wxGISFeature::GetFieldAsDateTime(int nIndex, int *pnYear, int *pnMonth, int *pnDay, int *pnHour, int *pnMinute, int *pnSecond, int *pnTZFlag) const
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, FALSE, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, FALSE, wxT("The OGRFeature pointer is null"));
     return ((wxGISFeatureRefData *)m_refData)->m_poFeature->GetFieldAsDateTime(nIndex, pnYear, pnMonth, pnDay, pnHour, pnMinute, pnSecond, pnTZFlag);
 }
 
 double wxGISFeature::GetFieldAsDouble(int nIndex) const
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, 0, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, 0, wxT("The OGRFeature pointer is null"));
     return ((wxGISFeatureRefData *)m_refData)->m_poFeature->GetFieldAsDouble(nIndex);
 }
 
@@ -232,7 +233,7 @@ double wxGISFeature::GetFieldAsDouble (const wxString &sFieldName) const
 wxArrayInt wxGISFeature::GetFieldAsIntegerList(int nIndex) const
 {
     wxArrayInt ret;
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, ret, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, ret, wxT("The OGRFeature pointer is null"));
     int nCount = 0;
     const int* paInts = ((wxGISFeatureRefData *)m_refData)->m_poFeature->GetFieldAsIntegerList(nIndex, &nCount);
     for (int i = 0; i < nCount; ++i)
@@ -245,7 +246,7 @@ wxArrayInt wxGISFeature::GetFieldAsIntegerList(int nIndex) const
 wxArrayDouble wxGISFeature::GetFieldAsDoubleList(int nIndex) const
 {
     wxArrayDouble ret;
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, ret, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, ret, wxT("The OGRFeature pointer is null"));
     int nCount = 0;
     const double* paDoubles = ((wxGISFeatureRefData *)m_refData)->m_poFeature->GetFieldAsDoubleList(nIndex, &nCount);
     for (int i = 0; i < nCount; ++i)
@@ -258,7 +259,7 @@ wxArrayDouble wxGISFeature::GetFieldAsDoubleList(int nIndex) const
 wxArrayString wxGISFeature::GetFieldAsStringList(int nIndex) const
 {
     wxArrayString ret;
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, ret, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, ret, wxT("The OGRFeature pointer is null"));
 
     char** papszLinkList = ((wxGISFeatureRefData *)m_refData)->m_poFeature->GetFieldAsStringList(nIndex);
     for (int i = 0; papszLinkList[i] != NULL; ++i)
@@ -280,13 +281,13 @@ wxString wxGISFeature::GetFieldAsString(const wxString &sFieldName) const
 
 const char* wxGISFeature::GetFieldAsChar(int nField) const
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, NULL, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, NULL, wxT("The OGRFeature pointer is null"));
     return ((wxGISFeatureRefData *)m_refData)->m_poFeature->GetFieldAsString(nField);
 }
 
 wxString wxGISFeature::GetFieldAsString(int nField) const
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxEmptyString, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxEmptyString, wxT("The OGRFeature pointer is null"));
 
 	OGRFieldDefn* pDef = ((wxGISFeatureRefData *)m_refData)->m_poFeature->GetFieldDefnRef(nField);
     wxCHECK_MSG(pDef, wxEmptyString, wxT("The OGRFeature definition is null"));
@@ -373,7 +374,16 @@ wxString wxGISFeature::GetFieldAsString(int nField) const
 	default:
         {
             const char* pszStringData( ((wxGISFeatureRefData *)m_refData)->m_poFeature->GetFieldAsString(nField) );
-            sOut = EncodeString(pszStringData, ((wxGISFeatureRefData *)m_refData)->m_oEncoding);
+            if (((wxGISFeatureRefData *)m_refData)->m_bRecodeToSystem)
+            {
+                //UTF->System
+                CPLString szStr = CPLRecode(pszStringData, CPL_ENC_UTF8, wxLocale::GetSystemEncodingName().mb_str());
+                sOut = EncodeString(szStr.c_str(), ((wxGISFeatureRefData *)m_refData)->m_oEncoding);
+            }
+            else
+            {
+                sOut = EncodeString(pszStringData, ((wxGISFeatureRefData *)m_refData)->m_oEncoding);
+            }
         }
 	}
 	return sOut;
@@ -381,19 +391,19 @@ wxString wxGISFeature::GetFieldAsString(int nField) const
 
 void wxGISFeature::SetField(int nIndex, int nValue)
 {
-    wxCHECK_RET(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
+    wxCHECK_RET(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
     ((wxGISFeatureRefData *)m_refData)->m_poFeature->SetField(nIndex, nValue);
 }
 
 void wxGISFeature::SetField(int nIndex, double dfValue)
 {
-    wxCHECK_RET(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
+    wxCHECK_RET(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
     ((wxGISFeatureRefData *)m_refData)->m_poFeature->SetField(nIndex, dfValue);
 }
 
 void wxGISFeature::SetField(int nIndex, const wxString &sValue)
 {
-    wxCHECK_RET(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
+    wxCHECK_RET(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
 #ifdef CPL_RECODE_ICONV
     const char* szData = sValue.ToUTF8();// .mb_str(wxConvUTF8);
 #else
@@ -404,7 +414,7 @@ void wxGISFeature::SetField(int nIndex, const wxString &sValue)
 
 void wxGISFeature::SetField(int nIndex, const char* pszStr)
 {
-    wxCHECK_RET(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
+    wxCHECK_RET(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
     ((wxGISFeatureRefData *)m_refData)->m_poFeature->SetField(nIndex, pszStr);
 }
 //void wxGISFeature::SetField (int i, const wxArrayInt &anValues)
@@ -417,7 +427,7 @@ void wxGISFeature::SetField(int nIndex, const char* pszStr)
 
 void wxGISFeature::SetField(int nIndex, char **papszValues)
 {
-    wxCHECK_RET(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
+    wxCHECK_RET(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
     ((wxGISFeatureRefData *)m_refData)->m_poFeature->SetField(nIndex, papszValues);
 }
 
@@ -445,7 +455,7 @@ void wxGISFeature::SetField (const wxString &sFieldName, const wxArrayString &as
 
 void wxGISFeature::SetField(int nIndex, int nYear, int nMonth, int nDay, int nHour, int nMinute, int nSecond, int nTZFlag)
 {
-    wxCHECK_RET(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
+    wxCHECK_RET(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
     ((wxGISFeatureRefData *)m_refData)->m_poFeature->SetField(nIndex, nYear, nMonth, nDay, nHour, nMinute, nSecond, nTZFlag);
 }
 
@@ -504,7 +514,7 @@ void wxGISFeature::SetField(const wxString &sFieldName, const wxArrayDouble &adf
 
 void wxGISFeature::SetField(int nIndex, const wxArrayInt &anValues)
 {
-    wxCHECK_RET(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
+    wxCHECK_RET(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
 
     int *panValues = new int[anValues.GetCount()];
     for (size_t j = 0; j < anValues.GetCount(); ++j)
@@ -519,7 +529,7 @@ void wxGISFeature::SetField(int nIndex, const wxArrayInt &anValues)
 
 void wxGISFeature::SetField(int nIndex, const wxArrayDouble &adfValues)
 {
-    wxCHECK_RET(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
+    wxCHECK_RET(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
 
     double *padfValues = new double[adfValues.GetCount()];
     for (size_t j = 0; j < adfValues.GetCount(); ++j)
@@ -534,43 +544,43 @@ void wxGISFeature::SetField(int nIndex, const wxArrayDouble &adfValues)
 
 OGRErr wxGISFeature::SetGeometry(OGRGeometry* pGeom)
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, OGRERR_INVALID_HANDLE, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, OGRERR_INVALID_HANDLE, wxT("The OGRFeature pointer is null"));
     return ((wxGISFeatureRefData *)m_refData)->m_poFeature->SetGeometryDirectly(pGeom);
 }
 
 OGRErr wxGISFeature::SetGeometry(const wxGISGeometry &Geom)
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, OGRERR_INVALID_HANDLE, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, OGRERR_INVALID_HANDLE, wxT("The OGRFeature pointer is null"));
     return ((wxGISFeatureRefData *)m_refData)->m_poFeature->SetGeometryDirectly(Geom.Copy());
 }
 
 OGRErr wxGISFeature::SetGeometryDirectly(const wxGISGeometry &Geom)
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, OGRERR_INVALID_HANDLE, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, OGRERR_INVALID_HANDLE, wxT("The OGRFeature pointer is null"));
     return ((wxGISFeatureRefData *)m_refData)->m_poFeature->SetGeometryDirectly(Geom);
 }
 
 wxGISGeometry wxGISFeature::GetGeometry(void) const
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxGISGeometry(), wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxGISGeometry(), wxT("The OGRFeature pointer is null"));
     return wxGISGeometry(((wxGISFeatureRefData *)m_refData)->m_poFeature->GetGeometryRef(), false);
 }
 
 void wxGISFeature::SetStyleString(const wxString &sStyle)
 {
-    wxCHECK_RET(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
+    wxCHECK_RET(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
     ((wxGISFeatureRefData *)m_refData)->m_poFeature->SetStyleString(sStyle.ToUTF8());
 }
 
 void wxGISFeature::StealGeometry(void)
 {
-    wxCHECK_RET(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
+    wxCHECK_RET(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
     ((wxGISFeatureRefData *)m_refData)->m_poFeature->StealGeometry();
 }
 
 int wxGISFeature::GetFieldAsInteger(const wxString &sFieldName) const
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, 0, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, 0, wxT("The OGRFeature pointer is null"));
     int nField = GetFieldIndex(sFieldName);
     if(nField == -1)
         return 0;
@@ -579,39 +589,45 @@ int wxGISFeature::GetFieldAsInteger(const wxString &sFieldName) const
 
 int wxGISFeature::GetFieldAsInteger(int nIndex) const
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, 0, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, 0, wxT("The OGRFeature pointer is null"));
     return ((wxGISFeatureRefData *)m_refData)->m_poFeature->GetFieldAsInteger(nIndex);
 }
 
 int wxGISFeature::GetFieldIndex(const wxString &sFieldName) const
 {
     //TODO: check for russian field name encoding
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, -1, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, -1, wxT("The OGRFeature pointer is null"));
     return ((wxGISFeatureRefData *)m_refData)->m_poFeature->GetFieldIndex(sFieldName.ToUTF8());
 }
 
 wxString wxGISFeature::GetFieldName(int nIndex) const
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxEmptyString, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxEmptyString, wxT("The OGRFeature pointer is null"));
     return wxString(((wxGISFeatureRefData *)m_refData)->m_poFeature->GetFieldDefnRef(nIndex)->GetNameRef());
 }
 
 int wxGISFeature::GetFieldCount(void) const
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, 0, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, 0, wxT("The OGRFeature pointer is null"));
     return ((wxGISFeatureRefData *)m_refData)->m_poFeature->GetFieldCount();
 }
 
 OGRField* wxGISFeature::GetRawField(int nField) const
 {
-    wxCHECK_MSG(((wxGISFeatureRefData *)m_refData)->m_poFeature, 0, wxT("The OGRFeature pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, 0, wxT("The OGRFeature pointer is null"));
     return ((wxGISFeatureRefData *)m_refData)->m_poFeature->GetRawFieldRef(nField);
 }
 
 void wxGISFeature::SetField(int nIndex, OGRField* psField)
 {
-    wxCHECK_RET(((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
+    wxCHECK_RET(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
     ((wxGISFeatureRefData *)m_refData)->m_poFeature->SetField(nIndex, psField);
+}
+
+void wxGISFeature::SetEncoding(const wxFontEncoding &eEnc, bool bRecodeToSystem)
+{
+    wxCHECK_RET(m_refData && ((wxGISFeatureRefData *)m_refData)->m_poFeature, wxT("The OGRFeature pointer is null"));
+    ((wxGISFeatureRefData *)m_refData)->SetEncoding(eEnc, bRecodeToSystem);
 }
 
 //-----------------------------------------------------------------------------
@@ -662,14 +678,14 @@ wxGISGeometry::operator OGRGeometry*() const
 OGREnvelope wxGISGeometry::GetEnvelope(void) const
 {
     OGREnvelope Env;
-    wxCHECK_MSG(((wxGISGeometryRefData *)m_refData)->m_poGeom, Env, wxT("OGRGeometry pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom, Env, wxT("OGRGeometry pointer is null"));
     ((wxGISGeometryRefData *)m_refData)->m_poGeom->getEnvelope(&Env);
     return Env;
 }
 
 OGRGeometry* wxGISGeometry::Copy(void) const
 {
-    wxCHECK_MSG(((wxGISGeometryRefData *)m_refData)->m_poGeom, NULL, wxT("OGRGeometry pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom, NULL, wxT("OGRGeometry pointer is null"));
     return ((wxGISGeometryRefData *)m_refData)->m_poGeom->clone();
 }
 
@@ -682,20 +698,20 @@ OGRGeometry* wxGISGeometry::Steal(void)
 
 wxGISSpatialReference wxGISGeometry::GetSpatialReference() const
 {
-    wxCHECK_MSG(((wxGISGeometryRefData *)m_refData)->m_poGeom, wxNullSpatialReference, wxT("OGRGeometry pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom, wxNullSpatialReference, wxT("OGRGeometry pointer is null"));
     OGRSpatialReference *pSpaRef = ((wxGISGeometryRefData *)m_refData)->m_poGeom->getSpatialReference();
     return wxGISSpatialReference(pSpaRef);
 }
 
 void wxGISGeometry::SetSpatialReference(const wxGISSpatialReference &SpaRef)
 {
-    wxCHECK_RET(((wxGISGeometryRefData *)m_refData)->m_poGeom, wxT("OGRGeometry pointer is null"));
+    wxCHECK_RET(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom, wxT("OGRGeometry pointer is null"));
     ((wxGISGeometryRefData *)m_refData)->m_poGeom->assignSpatialReference(SpaRef);
 }
 
 OGRPoint* wxGISGeometry::GetCentroid(void)
 {
-    wxCHECK_MSG(((wxGISGeometryRefData *)m_refData)->m_poGeom, NULL, wxT("OGRGeometry pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom, NULL, wxT("OGRGeometry pointer is null"));
     OGRPoint* pt = new OGRPoint();
     if(((wxGISGeometryRefData *)m_refData)->m_poGeom->Centroid(pt) == OGRERR_NONE)
     {
@@ -710,48 +726,55 @@ OGRPoint* wxGISGeometry::GetCentroid(void)
 
 wxGISGeometry wxGISGeometry::Intersection(const wxGISGeometry &Geom) const
 {
-    wxCHECK_MSG(((wxGISGeometryRefData *)m_refData)->m_poGeom && Geom.IsOk(), wxGISGeometry(), wxT("OGRGeometry pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom && Geom.IsOk(), wxGISGeometry(), wxT("OGRGeometry pointer is null"));
     return wxGISGeometry( ((wxGISGeometryRefData *)m_refData)->m_poGeom->Intersection(Geom) );
 }
 
 wxGISGeometry wxGISGeometry::Union(const wxGISGeometry &Geom) const
 {
-    wxCHECK_MSG(((wxGISGeometryRefData *)m_refData)->m_poGeom && Geom.IsOk(), wxGISGeometry(), wxT("OGRGeometry pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom && Geom.IsOk(), wxGISGeometry(), wxT("OGRGeometry pointer is null"));
     return wxGISGeometry( ((wxGISGeometryRefData *)m_refData)->m_poGeom->Union(Geom) );
 }
 
 wxGISGeometry wxGISGeometry::UnionCascaded() const
 {
-    wxCHECK_MSG(((wxGISGeometryRefData *)m_refData)->m_poGeom, wxGISGeometry(), wxT("OGRGeometry pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom, wxGISGeometry(), wxT("OGRGeometry pointer is null"));
     return wxGISGeometry( ((wxGISGeometryRefData *)m_refData)->m_poGeom->UnionCascaded() );
 }
 
 bool wxGISGeometry::Intersects(const wxGISGeometry &Geom) const
 {
-    wxCHECK_MSG(((wxGISGeometryRefData *)m_refData)->m_poGeom && Geom.IsOk(), false, wxT("OGRGeometry pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom && Geom.IsOk(), false, wxT("OGRGeometry pointer is null"));
     return ((wxGISGeometryRefData *)m_refData)->m_poGeom->Intersects(Geom) == 0 ? false : true;
 }
 
 wxGISGeometry wxGISGeometry::Buffer(double dfBuff, int nQuadSegs) const
 {
-    wxCHECK_MSG(((wxGISGeometryRefData *)m_refData)->m_poGeom, wxGISGeometry(), wxT("OGRGeometry pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom, wxGISGeometry(), wxT("OGRGeometry pointer is null"));
     return wxGISGeometry( ((wxGISGeometryRefData *)m_refData)->m_poGeom->Buffer(dfBuff, nQuadSegs) );
 }
 
 OGRwkbGeometryType wxGISGeometry::GetType() const
 {
-    wxCHECK_MSG(((wxGISGeometryRefData *)m_refData)->m_poGeom, wkbUnknown, wxT("OGRGeometry pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom, wkbUnknown, wxT("OGRGeometry pointer is null"));
     return ((wxGISGeometryRefData *)m_refData)->m_poGeom->getGeometryType();
+}
+
+wxGISGeometry wxGISGeometry::Clone() const
+{
+    wxCHECK_MSG(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom, wxGISGeometry(), wxT("OGRGeometry pointer is null"));
+    wxGISGeometry geom(((wxGISGeometryRefData *)m_refData)->m_poGeom->clone());
+    return geom;
 }
 
 bool wxGISGeometry::Project(const wxGISSpatialReference &SpaRef)
 {
-    wxCHECK_MSG(((wxGISGeometryRefData *)m_refData)->m_poGeom, false, wxT("OGRGeometry pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom, false, wxT("OGRGeometry pointer is null"));
     return ((wxGISGeometryRefData *)m_refData)->m_poGeom->transformTo(SpaRef) == OGRERR_NONE;
 }
 
 bool wxGISGeometry::Project(OGRCoordinateTransformation* const poCT)
 {
-    wxCHECK_MSG(((wxGISGeometryRefData *)m_refData)->m_poGeom, false, wxT("OGRGeometry pointer is null"));
+    wxCHECK_MSG(m_refData && ((wxGISGeometryRefData *)m_refData)->m_poGeom, false, wxT("OGRGeometry pointer is null"));
     return ((wxGISGeometryRefData *)m_refData)->m_poGeom->transform(poCT) == OGRERR_NONE;
 }

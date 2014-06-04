@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -53,7 +53,7 @@ size_t wxGISGPValueDomain::GetCount(void) const
 
 wxVariant wxGISGPValueDomain::GetValue(size_t nIndex) const
 { 
-	wxASSERT(nIndex < m_asoData.size());
+    wxCHECK_MSG(nIndex < m_asoData.size(), wxVariant(), wxT("The index is out of the domain value scope"));
 	return m_asoData[nIndex]; 
 }
 

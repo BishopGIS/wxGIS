@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -108,7 +108,7 @@ wxGxTaskExecDlg::wxGxTaskExecDlg(wxGISGPToolManager* pToolManager, wxWindow* par
     m_bMainSizer->Add(m_pHtmlWindow, 1, wxEXPAND | wxALL, 5);
     m_pHtmlWindow->Show(false);
 
-   	this->SetSizer( m_bMainSizer );
+   	this->SetSizerAndFit( m_bMainSizer );
 	this->Layout();
 
     Fit();

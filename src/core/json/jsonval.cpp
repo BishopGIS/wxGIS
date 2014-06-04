@@ -23,6 +23,7 @@
 #include <wx/log.h>
 #include <wx/debug.h>
 #include <wx/arrimpl.cpp>
+#include <wx/utils.h>
 
 #include <wxgis/core/json/jsonval.h>
 
@@ -3115,7 +3116,7 @@ wxJSONValue::MemoryBuffToString( const wxMemoryBuffer& buff, size_t len )
 {
     size_t buffLen = buff.GetDataLen();
     void*  ptr = buff.GetData();
-    wxString s = MemoryBuffToString( ptr, MIN( buffLen, len ), buffLen );
+    wxString s = MemoryBuffToString(ptr, wxMin(buffLen, len), buffLen);
     return s;
 }
 

@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -20,16 +20,17 @@
  ****************************************************************************/
 
 #include "wxgis/catalog/gxremoteconn.h"
+#include "wxgis/datasource/sysop.h"
+#include "wxgis/catalog/gxcatalog.h"
+#include "wxgis/net/curl.h"
+#include "wxgis/core/json/jsonreader.h"
 
 #ifdef wxGIS_USE_POSTGRES
 
-#include "wxgis/datasource/sysop.h"
 #include "wxgis/catalog/gxpostgisdataset.h"
 #include "wxgis/datasource/postgisdataset.h"
-#include "wxgis/catalog/gxcatalog.h"
 #include "wxgis/catalog/gxdbconnfactory.h"
-#include "wxgis/net/curl.h"
-#include "wxgis/core/json/jsonreader.h"
+
 
 //--------------------------------------------------------------
 //class wxGxRemoteConnection
@@ -271,14 +272,14 @@ void wxGxRemoteConnection::LoadChildren(void)
         return;
     }
 
-    wxGISTableCached* pInfoSchema = wxDynamicCast(pDSet->ExecuteSQL(wxT("SELECT nspname,oid FROM pg_catalog.pg_namespace WHERE nspname NOT IN ('information_schema')"), wxT("PG")), wxGISTableCached);
+    wxGISTableCached* pInfoSchema = wxDynamicCast(pDSet->ExecuteSQL2(wxT("SELECT nspname,oid FROM pg_catalog.pg_namespace WHERE nspname NOT IN ('information_schema')"), wxT("PG")), wxGISTableCached);
 
     if (NULL != pInfoSchema)
     {
         m_saSchemas = FillSchemaNames(pInfoSchema);
         wsDELETE(pInfoSchema);
 
-        pInfoSchema = wxDynamicCast(pDSet->ExecuteSQL(wxT("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"), wxT("PG")), wxGISTableCached);
+        pInfoSchema = wxDynamicCast(pDSet->ExecuteSQL2(wxT("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"), wxT("PG")), wxGISTableCached);
 
         wxFeatureCursor Cursor = pInfoSchema->Search();
         wxGISFeature Feature;
@@ -347,7 +348,7 @@ wxThread::ExitCode wxGxRemoteConnection::CheckChanges()
         //previous sql statement
         //SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT LIKE 'pg_%' AND table_schema NOT LIKE 'information_schema'
         //SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog', 'information_schema')"), wxT("PG"))
-        wxGISTableCached* pInfoSchema = wxDynamicCast(pDSet->ExecuteSQL(wxT("SELECT nspname,oid FROM pg_catalog.pg_namespace WHERE nspname NOT IN ('information_schema')"), wxT("PG")), wxGISTableCached);
+        wxGISTableCached* pInfoSchema = wxDynamicCast(pDSet->ExecuteSQL2(wxT("SELECT nspname,oid FROM pg_catalog.pg_namespace WHERE nspname NOT IN ('information_schema')"), wxT("PG")), wxGISTableCached);
 
         if (NULL != pInfoSchema)
         {
@@ -435,7 +436,7 @@ void wxGxRemoteConnection::RenameSchema(const wxString& sSchemaName, const wxStr
         if (NULL != current && current->GetName().IsSameAs(sSchemaName))
         {
             current->SetName(sNewSchemaName);
-            CPLString szNewSchemaName = current->GetName().mb_str(wxConvUTF8);
+            CPLString szNewSchemaName(current->GetName().ToUTF8());
             current->SetPath(CPLFormFilename(CPLGetPath(current->GetPath()), szNewSchemaName, NULL));
             wxGIS_GXCATALOG_EVENT_ID(ObjectChanged, current->GetId());
             break;
@@ -649,7 +650,7 @@ wxArrayString wxGxRemoteDBSchema::FillTableNames()
 
     //get all tables list
     //SELECT table_name FROM information_schema.tables WHERE table_schema LIKE 'public';
-    wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL(wxString::Format(wxT("SELECT table_name FROM information_schema.tables WHERE table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
+    wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL2(wxString::Format(wxT("SELECT table_name FROM information_schema.tables WHERE table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
     if (NULL != pTableList)
     {
         wxFeatureCursor Cursor = pTableList->Search();
@@ -692,7 +693,7 @@ void wxGxRemoteDBSchema::LoadChildren(void)
     if(m_bHasGeom)
     {
         //remove table name from tables list
-        wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL(wxString::Format(wxT("SELECT f_table_name FROM public.geometry_columns WHERE f_table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
+        wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL2(wxString::Format(wxT("SELECT f_table_name FROM public.geometry_columns WHERE f_table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
 
         if(NULL != pTableList)
         {
@@ -721,7 +722,7 @@ void wxGxRemoteDBSchema::LoadChildren(void)
     if(m_bHasGeog)
     {
         //remove table name from tables list
-        wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL(wxString::Format(wxT("SELECT f_table_name FROM public.geography_columns WHERE f_table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
+        wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL2(wxString::Format(wxT("SELECT f_table_name FROM public.geography_columns WHERE f_table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
 
         if(NULL != pTableList)
         {
@@ -748,7 +749,7 @@ void wxGxRemoteDBSchema::LoadChildren(void)
     if(m_bHasRaster)
     {
         //remove table name from tables list
-        wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL(wxString::Format(wxT("SELECT r_table_name FROM public.raster_columns WHERE r_table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
+        wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL2(wxString::Format(wxT("SELECT r_table_name FROM public.raster_columns WHERE r_table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
 
         if(NULL != pTableList)
         {
@@ -799,7 +800,7 @@ void wxGxRemoteDBSchema::CheckChanges()
     if (m_bHasGeom)
     {
         //remove table name from tables list
-        wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL(wxString::Format(wxT("SELECT f_table_name FROM public.geometry_columns WHERE f_table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
+        wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL2(wxString::Format(wxT("SELECT f_table_name FROM public.geometry_columns WHERE f_table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
 
         if (NULL != pTableList)
         {
@@ -837,7 +838,7 @@ void wxGxRemoteDBSchema::CheckChanges()
     if (m_bHasGeog)
     {
         //remove table name from tables list
-        wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL(wxString::Format(wxT("SELECT f_table_name FROM public.geography_columns WHERE f_table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
+        wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL2(wxString::Format(wxT("SELECT f_table_name FROM public.geography_columns WHERE f_table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
 
         if (NULL != pTableList)
         {
@@ -875,7 +876,7 @@ void wxGxRemoteDBSchema::CheckChanges()
     if (m_bHasRaster)
     {
         //remove table name from tables list
-        wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL(wxString::Format(wxT("SELECT r_table_name FROM public.raster_columns WHERE r_table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
+        wxGISTableCached* pTableList = wxDynamicCast(m_pwxGISRemoteConn->ExecuteSQL2(wxString::Format(wxT("SELECT r_table_name FROM public.raster_columns WHERE r_table_schema LIKE '%s'"), GetName().c_str()), wxT("PG")), wxGISTableCached);
 
         if (NULL != pTableList)
         {
@@ -1250,7 +1251,7 @@ void wxGxNGWService::LoadChildren(void)
 {
     if (m_bChildrenLoaded)
         return;
-    new wxGxNGWLayers(this, _("Layers"), CPLString(m_sURL.ToUTF8()));
+    new wxGxNGWRoot(this, _("Layers"), CPLString(m_sURL.ToUTF8()));
     m_bIsConnected = true;
     m_bChildrenLoaded = true;
 
@@ -1304,11 +1305,11 @@ bool wxGxNGWService::CanCreate(long nDataType, long DataSubtype)
 }
 
 //--------------------------------------------------------------
-//class wxGxNGWLayers
+//class wxGxNGWRoot
 //--------------------------------------------------------------
-IMPLEMENT_CLASS(wxGxNGWLayers, wxGxObjectContainer)
+IMPLEMENT_CLASS(wxGxNGWRoot, wxGxObjectContainer)
 
-wxGxNGWLayers::wxGxNGWLayers(wxGxObject *oParent, const wxString &soName, const CPLString &soPath) : wxGxObjectContainer(oParent, soName, soPath)
+wxGxNGWRoot::wxGxNGWRoot(wxGxObject *oParent, const wxString &soName, const CPLString &soPath) : wxGxObjectContainer(oParent, soName, soPath)
 {
     m_bChildrenLoaded = false;
     m_nDNSCacheTimeout = 180;
@@ -1326,24 +1327,24 @@ wxGxNGWLayers::wxGxNGWLayers(wxGxObject *oParent, const wxString &soName, const 
     }
 }
 
-wxGxNGWLayers::~wxGxNGWLayers(void)
+wxGxNGWRoot::~wxGxNGWRoot(void)
 {
 }
 
-bool wxGxNGWLayers::HasChildren(void)
+bool wxGxNGWRoot::HasChildren(void)
 {
     LoadChildren();
     return wxGxObjectContainer::HasChildren();
 }
 
-void wxGxNGWLayers::Refresh(void)
+void wxGxNGWRoot::Refresh(void)
 {
     DestroyChildren();
     LoadChildren();
     wxGxObject::Refresh();
 }
 
-void wxGxNGWLayers::LoadChildren(void)
+void wxGxNGWRoot::LoadChildren(void)
 {
     if (m_bChildrenLoaded)
         return;
@@ -1385,14 +1386,77 @@ void wxGxNGWLayers::LoadChildren(void)
 
         AddLayer(sName, nId);
     }
-    
+
+    wxJSONValue oChildren = JSONRoot[wxT("children")];
+    for (size_t i = 0; i < oChildren.Size(); ++i)
+    {
+        wxString sName = oChildren[i][wxT("display_name")].AsString();
+        int nId = oChildren[i][wxT("id")].AsInt();
+
+        AddLayerGroup(oChildren[i], sName, nId);
+    }
+
     m_sName = JSONRoot[wxT("display_name")].AsString();
+
+}
+
+wxGxObject* wxGxNGWRoot::AddLayer(const wxString &sName, int nId)
+{
+    return wxStaticCast(new wxGxNGWLayer(this, sName), wxGxObject);
+}
+
+wxGxObject* wxGxNGWRoot::AddLayerGroup(const wxJSONValue &Data, const wxString &sName, int nId)
+{
+    wxGxNGWLayers* pLayers = new wxGxNGWLayers(this, sName);
+    pLayers->LoadChildren(Data);
+    return wxStaticCast(pLayers, wxGxObject);
+}
+
+//--------------------------------------------------------------
+//class wxGxNGWLayers
+//--------------------------------------------------------------
+IMPLEMENT_CLASS(wxGxNGWLayers, wxGxObjectContainer)
+
+wxGxNGWLayers::wxGxNGWLayers(wxGxObject *oParent, const wxString &soName, const CPLString &soPath) : wxGxObjectContainer(oParent, soName, soPath)
+{
+}
+
+wxGxNGWLayers::~wxGxNGWLayers()
+{
 
 }
 
 wxGxObject* wxGxNGWLayers::AddLayer(const wxString &sName, int nId)
 {
     return wxStaticCast(new wxGxNGWLayer(this, sName), wxGxObject);
+}
+
+wxGxObject* wxGxNGWLayers::AddLayerGroup(const wxJSONValue &Data, const wxString &sName, int nId)
+{
+    wxGxNGWLayers* pLayers = new wxGxNGWLayers(this, sName);
+    pLayers->LoadChildren(Data);
+    return wxStaticCast(pLayers, wxGxObject);
+}
+
+void wxGxNGWLayers::LoadChildren(const wxJSONValue &Data)
+{
+    wxJSONValue oLayers = Data[wxT("layers")];
+    for (size_t i = 0; i < oLayers.Size(); ++i)
+    {
+        wxString sName = oLayers[i][wxT("display_name")].AsString();
+        int nId = oLayers[i][wxT("id")].AsInt();
+
+        AddLayer(sName, nId);
+    }
+
+    wxJSONValue oChildren = Data[wxT("children")];
+    for (size_t i = 0; i < oChildren.Size(); ++i)
+    {
+        wxString sName = oChildren[i][wxT("display_name")].AsString();
+        int nId = oChildren[i][wxT("id")].AsInt();
+
+        AddLayerGroup(oChildren[i], sName, nId);
+    }
 }
 
 

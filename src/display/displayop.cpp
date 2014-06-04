@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -28,8 +28,8 @@
 #endif
 
 #ifdef __WXGTK__
-	#include <gdk/gdk.h>
-	#include <gtk/gtk.h>
+    //#include <gdk/gdk.h>
+    //#include <gtk/gtk.h>
 #endif
 
 void SetColorValue(wxXmlNode* pNode, const wxString &sAttrName, const wxGISColor &oColor)
@@ -68,10 +68,10 @@ void RotateEnvelope(OGREnvelope &Env, double dAngle, double dX, double dY)
 	cairo_matrix_transform_point(&Matrix, &X3, &Y3);
 	cairo_matrix_transform_point(&Matrix, &X4, &Y4);
 
-	Env.MinX = std::min(std::min(X1, X2), std::min(X3, X4));
-	Env.MinY = std::min(std::min(Y1, Y2), std::min(Y3, Y4));
-	Env.MaxX = std::max(std::max(X1, X2), std::max(X3, X4));
-	Env.MaxY = std::max(std::max(Y1, Y2), std::max(Y3, Y4));
+    Env.MinX = wxMin(wxMin(X1, X2), wxMin(X3, X4));
+    Env.MinY = wxMin(wxMin(Y1, Y2), wxMin(Y3, Y4));
+    Env.MaxX = wxMax(wxMax(X1, X2), wxMax(X3, X4));
+    Env.MaxY = wxMax(wxMax(Y1, Y2), wxMax(Y3, Y4));
 }
 
 //Sutherland-Hodgman Polygon Clipping
@@ -135,7 +135,7 @@ void ClipGeometryByEnvelope(OGRRawPoint* pOGRRawPoints, int *pnPointCount, const
 //    else if(sc2 <= DELTA)
 //        m_World2DC = sc1;
 //    else
-//        m_World2DC	= MIN(sc1, sc2);
+//        m_World2DC	= wxMin(sc1, sc2);
 //}
 //
 //wxRect wxGISDisplayTransformation::GetDeviceFrame(void)
@@ -162,7 +162,7 @@ void ClipGeometryByEnvelope(OGRRawPoint* pOGRRawPoints, int *pnPointCount, const
 //    else if(sc2 <= DELTA)
 //        m_World2DC = sc1;
 //    else
-//        m_World2DC	= MIN(sc1, sc2);
+//        m_World2DC	= wxMin(sc1, sc2);
 //	m_bIsBoundsSet = true;
 //}
 //
@@ -196,8 +196,8 @@ void ClipGeometryByEnvelope(OGRRawPoint* pOGRRawPoints, int *pnPointCount, const
 //		w_h = w_h * PIDEG * m_pSpatialReference->GetSemiMinor();
 //	}
 //
-//	double screen = MIN(screen_w, screen_h);
-//	double world = MIN(w_w, w_h);
+//	double screen = wxMin(screen_w, screen_h);
+//	double world = wxMin(w_w, w_h);
 //
 //	return (world * 100) / screen;//cm!!!
 //}

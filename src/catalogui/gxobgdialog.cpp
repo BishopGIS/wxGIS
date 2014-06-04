@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -480,23 +480,23 @@ wxGxObjectDialog::wxGxObjectDialog( wxWindow* parent, wxWindowID id, const wxStr
         pwxGISCatalogMainCmd = new wxGISCatalogMainCmd();
         pwxGISCatalogMainCmd->OnCreate(this);
         pwxGISCatalogMainCmd->SetSubType(IDs[i]);
-        pwxGISCatalogMainCmd->SetID(ID_PLUGINCMD + nCmdCounter);
+        pwxGISCatalogMainCmd->SetId(ID_PLUGINCMD + nCmdCounter);
         nCmdCounter++;
 
         m_CommandArray.push_back(pwxGISCatalogMainCmd);
 
         wxGISEnumCommandKind kind = pwxGISCatalogMainCmd->GetKind();
-        if(pwxGISCatalogMainCmd->GetKind() == enumGISCommandDropDown)
+        if (kind == enumGISCommandDropDown)
             kind = enumGISCommandNormal;
-		m_toolBar->AddTool( pwxGISCatalogMainCmd->GetID(), pwxGISCatalogMainCmd->GetCaption(), pwxGISCatalogMainCmd->GetBitmap(), wxNullBitmap, (wxItemKind)kind, pwxGISCatalogMainCmd->GetTooltip(), pwxGISCatalogMainCmd->GetMessage(), NULL );
+		m_toolBar->AddTool( pwxGISCatalogMainCmd->GetId(), pwxGISCatalogMainCmd->GetCaption(), pwxGISCatalogMainCmd->GetBitmap(), wxNullBitmap, (wxItemKind)kind, pwxGISCatalogMainCmd->GetTooltip(), pwxGISCatalogMainCmd->GetMessage(), NULL );
 		if(pwxGISCatalogMainCmd->GetKind() == enumGISCommandDropDown)
-			m_toolBar->SetToolDropDown(pwxGISCatalogMainCmd->GetID(), true);
+			m_toolBar->SetToolDropDown(pwxGISCatalogMainCmd->GetId(), true);
     }
     
     wxGISCatalogViewsCmd* pwxGISCatalogViewsCmd = new wxGISCatalogViewsCmd();
     pwxGISCatalogViewsCmd->OnCreate(this);
     pwxGISCatalogViewsCmd->SetSubType(0);
-    pwxGISCatalogViewsCmd->SetID(ID_PLUGINCMD + nCmdCounter);
+    pwxGISCatalogViewsCmd->SetId(ID_PLUGINCMD + nCmdCounter);
     nCmdCounter++;
 
     //pwxGISCatalogViewsCmd->SetID(ID_PLUGINCMD + 9);
@@ -504,16 +504,16 @@ wxGxObjectDialog::wxGxObjectDialog( wxWindow* parent, wxWindowID id, const wxStr
     wxGISEnumCommandKind kind = pwxGISCatalogViewsCmd->GetKind();
     if(pwxGISCatalogViewsCmd->GetKind() == enumGISCommandDropDown)
         kind = enumGISCommandNormal;
-	m_toolBar->AddTool( pwxGISCatalogViewsCmd->GetID(), pwxGISCatalogViewsCmd->GetCaption(), pwxGISCatalogViewsCmd->GetBitmap(), wxNullBitmap, (wxItemKind)kind, pwxGISCatalogViewsCmd->GetTooltip(), pwxGISCatalogViewsCmd->GetMessage(), NULL );
+	m_toolBar->AddTool( pwxGISCatalogViewsCmd->GetId(), pwxGISCatalogViewsCmd->GetCaption(), pwxGISCatalogViewsCmd->GetBitmap(), wxNullBitmap, (wxItemKind)kind, pwxGISCatalogViewsCmd->GetTooltip(), pwxGISCatalogViewsCmd->GetMessage(), NULL );
 	if(pwxGISCatalogViewsCmd->GetKind() == enumGISCommandDropDown)
-		m_toolBar->SetToolDropDown(pwxGISCatalogViewsCmd->GetID(), true);
+		m_toolBar->SetToolDropDown(pwxGISCatalogViewsCmd->GetId(), true);
 
 	m_toolBar->Realize();
 
     //rename
     pwxGISCatalogMainCmd = new wxGISCatalogMainCmd();
     pwxGISCatalogMainCmd->OnCreate(this);
-    pwxGISCatalogMainCmd->SetID(ID_PLUGINCMD + nCmdCounter);
+    pwxGISCatalogMainCmd->SetId(ID_PLUGINCMD + nCmdCounter);
     pwxGISCatalogMainCmd->SetSubType(8);
     m_CommandArray.push_back(pwxGISCatalogMainCmd);
     nCmdCounter++;
@@ -521,7 +521,7 @@ wxGxObjectDialog::wxGxObjectDialog( wxWindow* parent, wxWindowID id, const wxStr
     //refresh
     pwxGISCatalogMainCmd = new wxGISCatalogMainCmd();
     pwxGISCatalogMainCmd->OnCreate(this);
-    pwxGISCatalogMainCmd->SetID(ID_PLUGINCMD + nCmdCounter);
+    pwxGISCatalogMainCmd->SetId(ID_PLUGINCMD + nCmdCounter);
     pwxGISCatalogMainCmd->SetSubType(9);
     m_CommandArray.push_back(pwxGISCatalogMainCmd);
     nCmdCounter++;
@@ -566,7 +566,7 @@ wxGxObjectDialog::wxGxObjectDialog( wxWindow* parent, wxWindowID id, const wxStr
 
 	bMainSizer->Add( fgCeilSizer, 0, wxEXPAND, 5 );
 
-	this->SetSizer( bMainSizer );
+    this->SetSizerAndFit(bMainSizer);
 	this->Layout();
 }
 

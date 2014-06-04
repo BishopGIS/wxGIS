@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -72,14 +72,14 @@ public:
 	virtual bool OnCreate(wxGISApplicationBase* pApp) = 0;
 	virtual wxString GetTooltip(void) = 0;
 	virtual unsigned char GetCount(void) = 0;
-	virtual void SetID(long nID);
-	virtual long GetID(void) const;
+	virtual void SetId(long nId);
+	virtual long GetId(void) const;
 	//
 	virtual void SetSubType(unsigned char SubType);
 	virtual unsigned char GetSubType(void) const;
 protected:
 	unsigned char m_subtype;
-	long m_CommandID;
+	long m_CommandId;
 };
 
 /** \def vector<wxGISCommand*> COMMANDARRAY

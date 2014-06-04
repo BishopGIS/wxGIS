@@ -7,7 +7,7 @@
 *
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
+*    the Free Software Foundation, either version 2 of the License, or
 *    (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
@@ -40,8 +40,10 @@ public:
     wxGxSelectionEvent(wxEventType eventType = wxGXSELECTION_CHANGED, wxGxSelection* pSelection = NULL, long nInitiator = wxNOT_FOUND) : wxEvent(0, eventType), m_nInitiator(nInitiator), m_pSelection(pSelection)
 	{
 	}
-	wxGxSelectionEvent(const wxGxSelectionEvent& event) : wxEvent(event), m_nInitiator(event.m_nInitiator), m_pSelection(event.m_pSelection)
+	wxGxSelectionEvent(const wxGxSelectionEvent& event) : wxEvent(event)
 	{
+        m_nInitiator = event.m_nInitiator;
+        m_pSelection = event.m_pSelection;
 	}
 
     void SetInitiator(long nInitiator) { m_nInitiator = nInitiator; }
